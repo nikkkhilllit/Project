@@ -40,7 +40,7 @@ const ProjectCreate = () => {
     try {
       const response = await axios.post(
         'http://localhost:5000/projects/create',
-        { title, description, budget, deadline, tasks },
+        { title, description, budget, deadline, tasks: formattedTasks },
         { headers: { Authorization: `Bearer ${token}` } }  // Send token in header
       );
       alert('Project created successfully!');

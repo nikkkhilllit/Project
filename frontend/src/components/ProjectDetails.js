@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const ProjectDetails = () => {
   const { id } = useParams(); // Get project ID from URL
@@ -73,8 +74,12 @@ const ProjectDetails = () => {
               <p>
                 <span className="font-medium">Status:</span> {task.status}
               </p>
+              <Link to={`/collab/${task.taskId}`} className="text-blue-500 underline">
+              Go to Collaboration Workspace
+              </Link>
             </div>
           ))}
+
         </div>
       )}
     </div>

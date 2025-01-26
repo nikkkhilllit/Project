@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const taskSchema = new mongoose.Schema({
+  taskId: { type: String, required: true, unique: true, default: uuidv4 }, // Unique task identifier
   title: { type: String, required: true },
   role: { type: String, required: true },
   skills: [String],

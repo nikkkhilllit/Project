@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Navigate } from 'react-router-dom'; // Import Navigate for redirection
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
-
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const [userData, setUserData] = useState(null);
@@ -59,9 +59,12 @@ const Dashboard = () => {
     <div>
       <h2>Dashboard</h2>
       {userData ? (
-        <div>
+        <div className='flex flex-col'>
           <p>Email: {userData.email}</p> {/* Assuming user data has 'email' */}
           <p>User ID: {userData._id}</p> {/* Assuming user data has '_id' */}
+          <Link to={`/myprojects`} className="text-blue-500 underline">
+  My Projects
+</Link>
           <button onClick={handleLogout}>Logout</button>
         </div>
       ) : (

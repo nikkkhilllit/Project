@@ -53,7 +53,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
   });
 
-
+  router.get('/:taskId', async (req, res) => {
+    const { taskId } = req.params;
+  
+    try {
+      const project = await Project.findOne({ 'tasks.taskId': taskId });
+      if (!project) return res.status(404).json({ error: 'Task not found' });
+  
+      const task = project.tasks.find(task => task.taskId === taskId);
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
   
 
 module.exports = router;

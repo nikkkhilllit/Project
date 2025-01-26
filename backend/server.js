@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/project');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
@@ -13,8 +15,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-  // This will allow all origins by default
 
+// This will allow all origins by default
 app.use(express.json());
 
 // MongoDB connection
@@ -26,6 +28,46 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 app.use('/auth', authRoutes);
 app.use('/projects', projectRoutes);
 
+// Create HTTP server and integrate with Socket.IO
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000', // Your frontend URL
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Real-time communication: Code collaboration
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  socket.on('join-room', (taskId) => {
+    socket.join(taskId);
+    console.log(`User ${socket.id} joined room: ${taskId}`);
+  });
+
+  socket.on('leave-room', (taskId) => {
+    socket.leave(taskId);
+    console.log(`User ${socket.id} left room: ${taskId}`);
+  });
+  // Code collaboration
+  socket.on('code-change', ({ room, code }) => {
+    socket.to(room).emit('code-update', code); // Send the code to others in the room
+  });
+
+  // Chat communication
+  socket.on('send-message', ({ room, message, username }) => {
+    const fullMessage = `${username}: ${message}`;
+    socket.to(room).emit('receive-message', fullMessage); // Broadcast to others
+    console.log(`Message in room ${room}: ${fullMessage}`);
+  });
+
+  // Disconnect handler
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
