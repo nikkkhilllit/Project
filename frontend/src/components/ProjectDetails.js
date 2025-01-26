@@ -40,7 +40,6 @@ const ProjectDetails = () => {
       [name]: name === 'skills' ? value.split(',').map(skill => skill.trim()) : value,
     }));
   };
-  
 
   const handleAddTask = async () => {
     const token = localStorage.getItem('authToken'); // Get token from localStorage
@@ -64,7 +63,30 @@ const ProjectDetails = () => {
       setError(error.response?.data?.message || 'Failed to add new task');
     }
   };
-  
+
+  const handleApplyForTask = async (taskId) => {
+    const token = localStorage.getItem('authToken'); // Get token from localStorage
+
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/projects/${taskId}/apply`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(response.data.message); // Show success message
+      setProject((prevProject) => ({
+        ...prevProject,
+        tasks: prevProject.tasks.map((task) =>
+          task.taskId === taskId
+            ? { ...task, applicants: [...task.applicants, token] }
+            : task
+        ),
+      }));
+    } catch (error) {
+      console.error(error); // Log the error for debugging
+      setError(error.response?.data?.message || 'Failed to apply for the task');
+    }
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -112,6 +134,14 @@ const ProjectDetails = () => {
               <Link to={`/collab/${task.taskId}`} className="text-blue-500 underline">
                 Go to Collaboration Workspace
               </Link>
+
+              {/* Apply Button */}
+              <button
+                onClick={() => handleApplyForTask(task.taskId)}
+                className="bg-green-500 text-white px-4 py-2 rounded mt-2"
+              >
+                Apply for Task
+              </button>
             </div>
           ))}
         </div>

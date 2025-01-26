@@ -332,5 +332,46 @@ router.get('/:id', authenticateToken, async (req, res) => {
       res.status(500).json({ message: 'Server error' });
     }
   });
+
+  router.get('/get/:id', authenticateToken, async (req, res) => {
+    try {
+      const project = await Project.findById(req.params.id).populate('createdBy');
+  
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+  
+      res.status(200).json(project); // The project object will now have `createdBy` populated
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  router.get('/task/:taskId', authenticateToken, async (req, res) => {
+    try {
+      const project = await Project.findOne({ 'tasks.taskId': req.params.taskId }).select('tasks.collaborators');
+    
+      if (!project) {
+        return res.status(404).json({ message: 'Task not found in any project' });
+      }
+    
+      // Find the specific task
+      const task = project.tasks.find(t => t.taskId === req.params.taskId);
+    
+      if (!task || !task.collaborators) {
+        return res.status(404).json({ message: 'No collaborators found for this task' });
+      }
+  
+      // Populate collaborators if needed
+      await task.populate('collaborators');
+    
+      res.status(200).json(task.collaborators); // This will return the list of collaborators
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
   
 module.exports = router;
