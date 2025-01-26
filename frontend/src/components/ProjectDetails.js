@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 
 const ProjectDetails = () => {
   const { id } = useParams(); // Get project ID from URL
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [newTask, setNewTask] = useState({
+    title: '',
+    role: '',
+    skills: [],
+    deadline: ''
+  });
 
   useEffect(() => {
     const fetchProject = async () => {
       const token = localStorage.getItem('authToken'); // Get token from localStorage
-      console.log('JWT Token:', token); // Debugging purpose
 
       try {
         const response = await axios.get(`http://localhost:5000/projects/${id}`, {
@@ -21,7 +25,6 @@ const ProjectDetails = () => {
         setProject(response.data);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching project:', error.response?.data || error.message);
         setError(error.response?.data?.message || 'An error occurred while fetching the project.');
         setLoading(false);
       }
@@ -29,6 +32,39 @@ const ProjectDetails = () => {
 
     fetchProject();
   }, [id]);
+
+  const handleTaskChange = (e) => {
+    const { name, value } = e.target;
+    setNewTask((prevTask) => ({
+      ...prevTask,
+      [name]: name === 'skills' ? value.split(',').map(skill => skill.trim()) : value,
+    }));
+  };
+  
+
+  const handleAddTask = async () => {
+    const token = localStorage.getItem('authToken'); // Get token from localStorage
+  
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/projects/${id}/tasks`,
+        {
+          ...newTask,
+          codeFiles: [] // Keep it empty for now
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProject((prevProject) => ({
+        ...prevProject,
+        tasks: [...prevProject.tasks, response.data.task],
+      }));
+      setNewTask({ title: '', role: '', skills: '', deadline: '' });
+    } catch (error) {
+      console.error(error); // Log the error for debugging
+      setError(error.response?.data?.message || 'Failed to add new task');
+    }
+  };
+  
 
   if (loading) {
     return <div>Loading...</div>;
@@ -64,9 +100,8 @@ const ProjectDetails = () => {
               <p>
                 <span className="font-medium">Role:</span> {task.role}
               </p>
-              <p>
-                <span className="font-medium">Skills:</span> {task.skills.join(', ')}
-              </p>
+              <p><span className="font-medium">Skills:</span> {Array.isArray(task.skills) ? task.skills.join(', ') : task.skills}</p>
+
               <p>
                 <span className="font-medium">Deadline:</span>{' '}
                 {new Date(task.deadline).toLocaleDateString()}
@@ -75,13 +110,55 @@ const ProjectDetails = () => {
                 <span className="font-medium">Status:</span> {task.status}
               </p>
               <Link to={`/collab/${task.taskId}`} className="text-blue-500 underline">
-              Go to Collaboration Workspace
+                Go to Collaboration Workspace
               </Link>
             </div>
           ))}
-
         </div>
       )}
+
+      <div className="mt-6">
+        <h3 className="text-xl font-semibold mb-4">Add New Task</h3>
+        <div className="space-y-2">
+          <input
+            type="text"
+            name="title"
+            value={newTask.title}
+            onChange={handleTaskChange}
+            placeholder="Task Title"
+            className="w-full px-3 py-2 border rounded"
+          />
+          <input
+            type="text"
+            name="role"
+            value={newTask.role}
+            onChange={handleTaskChange}
+            placeholder="Role"
+            className="w-full px-3 py-2 border rounded"
+          />
+          <input
+            type="text"
+            name="skills"
+            value={newTask.skills}
+            onChange={handleTaskChange}
+            placeholder="Skills (comma-separated)"
+            className="w-full px-3 py-2 border rounded"
+          />
+          <input
+            type="date"
+            name="deadline"
+            value={newTask.deadline}
+            onChange={handleTaskChange}
+            className="w-full px-3 py-2 border rounded"
+          />
+          <button
+            onClick={handleAddTask}
+            className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+          >
+            Add Task
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
