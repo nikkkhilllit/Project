@@ -105,6 +105,29 @@ router.get('/:id', authenticateToken, async (req, res) => {
       res.status(500).json({ error: 'Server error' });
     }
   });
+
+  router.get('/collaborators/:taskId', async (req, res) => {
+    const { taskId } = req.params;
+  
+    try {
+      // Find the project that contains the task with the given taskId
+      const project = await Project.findOne({ 'tasks.taskId': taskId }).populate('tasks.collaborators');
+      
+      if (!project) {
+        return res.status(404).json({ error: 'Task not found' });
+      }
+  
+      // Find the task from the project using taskId
+      const task = project.tasks.find(task => task.taskId === taskId);
+      
+      // Send the collaborators associated with the task
+      res.json(task.collaborators);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+  
   
   router.post('/:taskId/codefiles', authenticateToken, async (req, res) => {
     const { taskId } = req.params;
@@ -348,30 +371,37 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
   });
   
-  router.get('/task/:taskId', authenticateToken, async (req, res) => {
+  router.get('/projects/:id/tasks/:taskId', authenticateToken, async (req, res) => {
     try {
-      const project = await Project.findOne({ 'tasks.taskId': req.params.taskId }).select('tasks.collaborators');
-    
+      // Use req.params.id for project ID instead of req.params.projectId
+      const project = await Project.findOne({ _id: req.params.id }).populate('tasks.collaborators createdBy');
+      
       if (!project) {
-        return res.status(404).json({ message: 'Task not found in any project' });
-      }
-    
-      // Find the specific task
-      const task = project.tasks.find(t => t.taskId === req.params.taskId);
-    
-      if (!task || !task.collaborators) {
-        return res.status(404).json({ message: 'No collaborators found for this task' });
+        return res.status(404).json({ message: 'Project not found' });
       }
   
-      // Populate collaborators if needed
-      await task.populate('collaborators');
-    
-      res.status(200).json(task.collaborators); // This will return the list of collaborators
+      const task = project.tasks.find((task) => task.taskId === req.params.taskId);
+  
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+  
+      const userId = req.user.id; // Assuming JWT contains user info
+  
+      const isCreator = task.createdBy._id.toString() === userId;
+      const isCollaborator = task.collaborators.some((collaborator) => collaborator._id.toString() === userId);
+  
+      res.status(200).json({
+        task,
+        isCreator,
+        isCollaborator,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Server error' });
     }
   });
+  
   
   
 module.exports = router;
