@@ -66,6 +66,23 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+
+  // Add these handlers inside the io.on('connection') callback
+socket.on('file-created', (fileData) => {
+  socket.to(fileData.room).emit('file-created', fileData.file);
+});
+
+socket.on('file-renamed', ({ room, fileId, newName }) => {
+  socket.to(room).emit('file-renamed', { fileId, newName });
+});
+
+socket.on('file-deleted', ({ room, fileId }) => {
+  socket.to(room).emit('file-deleted', fileId);
+});
+
+socket.on('console-output', ({ room, output }) => {
+  socket.to(room).emit('console-output', output);
+});
 });
 
 // Start server

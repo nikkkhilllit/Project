@@ -36,3 +36,24 @@
     transform: rotate(360deg);
   }
 }
+
+@layer utilities {
+  .scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar::-webkit-scrollbar-track {
+    background: #2d2d2d; /* Dark background */
+    border-radius: 4px;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: #4a90e2; /* Stylish blue thumb */
+    border-radius: 4px;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #357ABD; /* Darker blue on hover */
+  }
+}

@@ -92,6 +92,23 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
   });
 
+  router.get('/:id/collabo', authenticateToken, async (req, res) => {
+    try {
+      const project = await Project.findById(req.params.id)
+        .populate('createdBy')
+        .populate('tasks.collaborators'); // Populate collaborators for each task
+  
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+  
+      res.status(200).json(project);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   router.get('/:taskId', async (req, res) => {
     const { taskId } = req.params;
   
@@ -402,6 +419,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
   });
   
-  
+router.get('/task/:taskId', authenticateToken, async (req, res) => {
+  try {
+    const project = await Project.findOne({ 'tasks.taskId': req.params.taskId })
+      .populate('createdBy', '_id') // Only get the _id of creator
+      .populate('tasks.collaborators', '_id'); // Only get _id of collaborators
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    res.json(project);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
   
 module.exports = router;

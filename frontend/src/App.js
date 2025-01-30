@@ -8,6 +8,7 @@ import ProjectCreate from './pages/ProjectCreate';
 import ProjectDetails from './components/ProjectDetails';
 import MyProjects from './components/MyProjects';
 import CollaborationWorkspace from './pages/CollaborationWorkspace';
+import ApplicantsPage from './components/ApplicantsPage';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('authToken'); // Check for 'authToken'
@@ -61,6 +62,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CollaborationWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/applicants/:taskId"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <ApplicantsPage />
             </ProtectedRoute>
           }
         />

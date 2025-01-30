@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Navigate } from 'react-router-dom'; // Import Navigate for redirection
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 const Dashboard = () => {
   const [userData, setUserData] = useState(null);
@@ -56,22 +57,59 @@ const Dashboard = () => {
   }
 
   return (
-    <div>
-      <h2>Dashboard</h2>
-      {userData ? (
-        <div className='flex flex-col'>
-          <p>Email: {userData.email}</p> {/* Assuming user data has 'email' */}
-          <p>User ID: {userData._id}</p> {/* Assuming user data has '_id' */}
-          <Link to={`/myprojects`} className="text-blue-500 underline">
-  My Projects
-</Link>
-          <button onClick={handleLogout}>Logout</button>
-        </div>
-      ) : (
-        <p>No user data available.</p>
-      )}
+    <div className="bg-gray-900 min-h-screen text-white">
+      <Navbar />
+      <div className="max-w-7xl mx-auto mt-10 p-6">
+        <h2 className="text-3xl font-semibold text-center mb-6">Dashboard</h2>
+  
+        {userData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* User Info Section */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-semibold mb-4">User Info</h3>
+              <p className="text-gray-400 mb-2">Email: <span className="text-blue-500">{userData.email}</span></p>
+              <p className="text-gray-400 mb-4">User ID: <span className="text-blue-500">{userData._id}</span></p>
+            </div>
+  
+            {/* Projects Section */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+              <h3 className="text-xl font-semibold mb-4">Project Details</h3>
+              <Link 
+                to={`/myprojects`} 
+                className="text-blue-500 underline hover:text-blue-700 transition duration-200"
+              >
+                View My Projects
+              </Link>
+
+              <Link 
+                to={`/create-project`} 
+                className="text-blue-500 underline hover:text-blue-700 transition duration-200"
+              >
+                Create a New Project
+              </Link>
+            </div>
+  
+            {/* Action Section */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-semibold mb-4">Actions</h3>
+              <button 
+                onClick={handleLogout} 
+                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded transition duration-200"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center text-gray-400">
+            <p>No user data available.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
+  
+  
 };
 
 export default Dashboard;

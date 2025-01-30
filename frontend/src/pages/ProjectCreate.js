@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 const ProjectCreate = () => {
   const [title, setTitle] = useState('');
@@ -57,87 +58,101 @@ const ProjectCreate = () => {
   
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Create a New Project</h1>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Project Title</label>
+    <div className="p-6 min-w-screen mx-auto bg-gray-800 rounded-lg shadow-lg">
+      <Navbar />
+      <h1 className="text-3xl font-semibold text-white mb-6 text-center">Create a New Project</h1>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="mb-4 mr-10 ml-10">
+          <label className="block text-gray-300 font-medium mb-2">Project Title</label>
           <input
             type="text"
-            className="w-full px-3 py-2 border rounded"
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            placeholder="Enter the project title"
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Description</label>
+        
+        <div className="mb-4 mr-10 ml-10">
+          <label className="block text-gray-300 font-medium mb-2">Description</label>
           <textarea
-            className="w-full px-3 py-2 border rounded"
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
+            placeholder="Enter the project description"
           ></textarea>
         </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Budget</label>
+  
+        <div className="mb-4 mr-10 ml-10">
+          <label className="block text-gray-300 font-medium mb-2">Budget</label>
           <input
             type="number"
-            className="w-full px-3 py-2 border rounded"
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={budget}
             onChange={(e) => setBudget(e.target.value)}
             required
+            placeholder="Enter the project budget"
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Deadline</label>
+  
+        <div className="mb-4 mr-10 ml-10">
+          <label className="block text-gray-300 font-medium mb-2">Deadline</label>
           <input
             type="date"
-            className="w-full px-3 py-2 border rounded"
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             required
           />
         </div>
-
-        <div className="mb-4">
-          <h2 className="text-lg font-bold mb-2">Tasks</h2>
+  
+        <div className="mb-4 mr-10 ml-10">
+          <h2 className="text-xl font-semibold text-white mb-4">Tasks</h2>
           {tasks.map((task, index) => (
-            <div key={index} className="mb-4 border p-3 rounded">
-              <label className="block text-gray-700 font-medium mb-2">Task Title</label>
+            <div key={index} className="p-4 mb-4 bg-gray-700 border border-gray-600 rounded-lg">
+              <label className="block text-gray-300 font-medium mb-2">Task Title</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={task.title}
                 onChange={(e) => handleTaskChange(index, 'title', e.target.value)}
                 required
+                placeholder="Enter task title"
               />
-              <label className="block text-gray-700 font-medium mb-2 mt-2">Role</label>
+  
+              <label className="block text-gray-300 font-medium mb-2 mt-4">Role</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={task.role}
                 onChange={(e) => handleTaskChange(index, 'role', e.target.value)}
                 required
+                placeholder="Enter task role"
               />
-              <label className="block text-gray-700 font-medium mb-2 mt-2">Skills (comma-separated)</label>
+  
+              <label className="block text-gray-300 font-medium mb-2 mt-4">Skills (comma-separated)</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={task.skills}
                 onChange={(e) => handleTaskChange(index, 'skills', e.target.value)}
+                placeholder="Enter task skills"
               />
-              <label className="block text-gray-700 font-medium mb-2 mt-2">Deadline</label>
+  
+              <label className="block text-gray-300 font-medium mb-2 mt-4">Deadline</label>
               <input
                 type="date"
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={task.deadline}
                 onChange={(e) => handleTaskChange(index, 'deadline', e.target.value)}
                 required
               />
+  
               <button
                 type="button"
-                className="text-red-500 mt-2"
+                className="text-red-500 mt-4 hover:text-red-700 transition duration-200"
                 onClick={() => removeTask(index)}
               >
                 Remove Task
@@ -146,22 +161,23 @@ const ProjectCreate = () => {
           ))}
           <button
             type="button"
-            className="bg-blue-500 text-white px-3 py-2 rounded"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
             onClick={addTask}
           >
             Add Task
           </button>
         </div>
-
+  
         <button
           type="submit"
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
         >
           Create Project
         </button>
       </form>
     </div>
   );
+  
 };
 
 export default ProjectCreate;

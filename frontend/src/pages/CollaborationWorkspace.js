@@ -9,6 +9,8 @@ import { java } from '@codemirror/lang-java';
 import { cpp } from '@codemirror/lang-cpp';
 import axios from 'axios';
 import { Edit, Trash } from 'lucide-react'; // Icons for update and delete actions
+import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 const socket = io('http://localhost:5000');
 
@@ -22,6 +24,9 @@ const CollaborationWorkspace = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [language, setLanguage] = useState(javascript); // Default to JavaScript
   const [output, setOutput] = useState(''); // Output terminal
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [fileExtension, setFileExtension] = useState('js');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -77,25 +82,30 @@ const CollaborationWorkspace = () => {
   }, [taskId]);
 
   const updateLanguage = (fileName) => {
-    const extension = fileName.split('.').pop().toLowerCase(); // Extract the extension
-    switch (extension) {
-      case 'js':
-        setLanguage(javascript);
-        break;
-      case 'py':
-        setLanguage(python);
-        break;
-      case 'java':
-        setLanguage(java);
-        break;
-      case 'cpp':
-        setLanguage(cpp);
-        break;
-      default:
-        setLanguage(javascript); // Default to JavaScript if no match
-        break;
-    }
-  };
+  const extension = fileName.split('.').pop().toLowerCase();
+  setFileExtension(extension);
+  
+  switch (extension) {
+    case 'js':
+      setLanguage(javascript);
+      break;
+    case 'py':
+      setLanguage(python);
+      break;
+    case 'java':
+      setLanguage(java);
+      break;
+    case 'cpp':
+    case 'cc':
+    case 'cxx':
+    case 'hpp':
+      setLanguage(cpp);
+      break;
+    default:
+      setLanguage(javascript);
+      break;
+  }
+};
 
   const handleCodeChange = (value) => {
     setCode(value);
@@ -113,21 +123,30 @@ const CollaborationWorkspace = () => {
   };
 
   const createCodeFile = async () => {
-    const fileName = prompt('Enter file name:');
-    if (!fileName) return;
-
+    const fileName = prompt('Enter file name with extension:');
+    if (!fileName || !fileName.includes('.')) {
+      alert('File must have an extension (e.g., .java, .cpp)');
+      return;
+    }
+  
     try {
       const response = await axios.post(
         `http://localhost:5000/projects/${taskId}/codefiles`,
         { fileName },
         { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
       );
-      setCodeFiles((prevFiles) => [...prevFiles, response.data.file]);
-      setSelectedFile(response.data.file.fileId);
-      setCode(response.data.file.content);
-      updateLanguage(response.data.file.fileName);
+      
+      const newFile = response.data.file;
+      setCodeFiles((prevFiles) => [...prevFiles, newFile]);
+      setSelectedFile(newFile.fileId);
+      setCode(newFile.content);
+      updateLanguage(newFile.fileName);
+      
+      // Broadcast to other users
+      socket.emit('file-created', { room: taskId, file: newFile });
     } catch (error) {
       console.error('Error creating new file:', error);
+      alert('Failed to create file. Check console for details.');
     }
   };
 
@@ -158,205 +177,325 @@ const CollaborationWorkspace = () => {
   const renameFile = async (fileId) => {
     const newName = prompt('Enter new file name:');
     if (!newName) return;
-
+  
     try {
       const response = await axios.put(
         `http://localhost:5000/projects/${taskId}/codefiles/${fileId}/rename`,
         { newName },
         { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
       );
+  
+      const updatedFile = response.data.file;
       setCodeFiles((prevFiles) =>
         prevFiles.map((file) =>
-          file.fileId === fileId ? { ...file, fileName: response.data.file.fileName } : file
+          file.fileId === fileId ? updatedFile : file
         )
       );
-      updateLanguage(response.data.file.fileName);
+  
+      if (selectedFile === fileId) {
+        updateLanguage(updatedFile.fileName);
+      }
+  
+      // Broadcast to other users
+      socket.emit('file-renamed', { 
+        room: taskId, 
+        fileId,
+        newName: updatedFile.fileName 
+      });
     } catch (error) {
       console.error('Error renaming file:', error);
+      alert('Failed to rename file. Check console for details.');
     }
   };
-
+  
   const deleteFile = async (fileId) => {
     if (!window.confirm('Are you sure you want to delete this file?')) return;
-
+  
     try {
       await axios.delete(
         `http://localhost:5000/projects/${taskId}/codefiles/${fileId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
       );
+  
       setCodeFiles((prevFiles) => prevFiles.filter((file) => file.fileId !== fileId));
       if (selectedFile === fileId) {
         setSelectedFile(null);
         setCode('// Start coding here...');
       }
+  
+      // Broadcast to other users
+      socket.emit('file-deleted', { room: taskId, fileId });
     } catch (error) {
       console.error('Error deleting file:', error);
+      alert('Failed to delete file. Check console for details.');
     }
   };
 
   const runCode = async () => {
     if (!code.trim()) return;
-
+  
     try {
-      // Send the code to Judge0 API for execution
       const response = await axios.post(
         'https://judge0-ce.p.rapidapi.com/submissions',
         {
-          language_id: getLanguageId(), // Get language ID dynamically
+          language_id: getLanguageId(),
           source_code: code,
-          stdin: '', // Optional: Provide input for the code if necessary
+          stdin: '',
+          cpu_time_limit: 5,
         },
         {
           headers: {
-            'X-RapidAPI-Key': '54343cf2e2msh807ae0fd6da5384p10795bjsnc2ad1d1f0de9', // Replace with your API key
+            'X-RapidAPI-Key': '54343cf2e2msh807ae0fd6da5384p10795bjsnc2ad1d1f0de9',
             'Content-Type': 'application/json',
           },
         }
       );
-
-      // Extract the submission ID to poll for the result
+  
       const { token } = response.data;
-      getExecutionResult(token);
+      const result = await getExecutionResult(token);
+  
+      // Extract output details
+      const { stdout, stderr, status, compile_output } = result;
+  
+      let outputMessage;
+      if (status.description === 'Accepted') {
+        outputMessage = `Output: ${stdout || "No output"}`;
+      } else {
+        outputMessage = `Error: ${stderr || compile_output || "Unknown error"}`;
+      }
+  
+      // Update local state and broadcast
+      setOutput(outputMessage);
+      socket.emit('console-output', {
+        room: taskId,
+        output: outputMessage,
+      });
     } catch (error) {
       console.error('Error running code:', error);
+      setOutput('Failed to execute code. Check console for details.');
     }
   };
+  
 
   const getLanguageId = () => {
-    switch (language) {
-      case javascript:
-        return 63; // JavaScript ID for Judge0
-      case python:
-        return 71; // Python ID for Judge0
-      case java:
-        return 62; // Java ID for Judge0
-      case cpp:
-        return 50; // C++ ID for Judge0
-      default:
-        return 63; // Default to JavaScript if no match
+    switch (fileExtension) {
+      case 'js': return 63;  // Node.js
+      case 'py': return 71;  // Python
+      case 'java': return 62; // Java
+      case 'cpp': return 53;  // C++ (GCC 9.4.0)
+      case 'c': return 50;    // C (GCC 9.4.0)
+      default: return 63;     // Default to JavaScript
     }
   };
 
   const getExecutionResult = async (token) => {
     try {
-      // Poll the API for the result
       const response = await axios.get(
         `https://judge0-ce.p.rapidapi.com/submissions/${token}`,
-        {
-          headers: {
-            'X-RapidAPI-Key': '54343cf2e2msh807ae0fd6da5384p10795bjsnc2ad1d1f0de9', // Replace with your API key
-          },
-        }
+        { headers: { 'X-RapidAPI-Key': '54343cf2e2msh807ae0fd6da5384p10795bjsnc2ad1d1f0de9' } }
       );
-
-      const { stdout, stderr, status } = response.data;
-
-      // Handle the output or error
-      if (status && status.description === 'Accepted') {
-        setOutput(`Output: ${stdout}`);
-      } else {
-        setOutput(`Error: ${stderr}`);
-      }
+      return response.data;
     } catch (error) {
       console.error('Error fetching execution result:', error);
+      throw error;
+    }
+  };
+  
+  // CollaborationWorkspace.js
+useEffect(() => {
+  const verifyAuthorization = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+      // Get current user
+      const userResponse = await axios.get('http://localhost:5000/auth/user', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const userId = userResponse.data.user._id;
+
+      // Get project containing the task
+      const projectResponse = await axios.get(
+        `http://localhost:5000/projects/task/${taskId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const project = projectResponse.data;
+      
+      // Check if user is project creator
+      const isCreator = project.createdBy._id.toString() === userId;
+      
+      // Find the specific task
+      const task = project.tasks.find(t => t.taskId === taskId);
+      if (!task) {
+        setIsAuthorized(false);
+        setLoadingAuth(false);
+        return;
+      }
+
+      // Check if user is task collaborator
+      const isCollaborator = task.collaborators.some(c => 
+        c._id.toString() === userId
+      );
+
+      setIsAuthorized(isCreator || isCollaborator);
+    } catch (error) {
+      console.error('Authorization check failed:', error);
+    } finally {
+      setLoadingAuth(false);
     }
   };
 
+  verifyAuthorization();
+}, [taskId]);
+
+useEffect(() => {
+  // Add these inside the existing useEffect
+  socket.on('file-created', (file) => {
+    setCodeFiles((prevFiles) => [...prevFiles, file]);
+  });
+
+  // Update the file-renamed listener
+socket.on('file-renamed', ({ fileId, newName }) => {
+  setCodeFiles((prevFiles) =>
+    prevFiles.map((file) => {
+      if (file.fileId === fileId) {
+        if (selectedFile === fileId) {
+          updateLanguage(newName);
+        }
+        return { ...file, fileName: newName };
+      }
+      return file;
+    })
+  );
+});
+
+  socket.on('file-deleted', (fileId) => {
+    setCodeFiles((prevFiles) => prevFiles.filter((file) => file.fileId !== fileId));
+    if (selectedFile === fileId) {
+      setSelectedFile(null);
+      setCode('// Start coding here...');
+    }
+  });
+
+  socket.on('console-output', (output) => {
+    setOutput(output);
+  });
+
+  // Don't forget to clean up these listeners
+  return () => {
+    socket.off('file-created');
+    socket.off('file-renamed');
+    socket.off('file-deleted');
+    socket.off('console-output');
+  };
+}, [taskId, selectedFile]);
+
+  if (loadingAuth) {
+    return <div>Loading authorization...</div>;
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        <h2>Access Denied</h2>
+        <p>You must be a collaborator or project owner to access this workspace.</p>
+        <Link to="/" className="text-blue-500">
+          Return Home
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-6xl mx-auto bg-white rounded shadow overflow-auto">
-      <h1 className="text-2xl font-bold mb-4">Real-Time Collaboration</h1>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <CodeMirror
-            value={code}
-            extensions={[language]} // Directly use the language extension
-            theme={oneDark}
-            onChange={handleCodeChange}
-          />
-        </div>
-        <div className="border p-4 rounded">
-          <h2 className="text-xl font-bold mb-2">Files</h2>
-          <ul className="space-y-2">
+    <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+      {/* Navbar */}
+      <Navbar />
+  
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Files */}
+        <div className="w-64 bg-gray-800 p-4 flex flex-col">
+          <h2 className="text-lg font-bold mb-2">Files</h2>
+          <ul className="space-y-2 flex-grow overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
             {codeFiles.map((file) => (
               <li key={file.fileId} className="flex justify-between items-center">
                 <span
-                  className="cursor-pointer text-blue-600"
+                  className="cursor-pointer text-blue-400"
                   onClick={() => handleFileSelect(file.fileId)}
                 >
                   {file.fileName}
                 </span>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => renameFile(file.fileId)}
-                    className="text-yellow-500"
-                  >
+                  <button onClick={() => renameFile(file.fileId)} className="text-yellow-400">
                     <Edit size={16} />
                   </button>
-                  <button
-                    onClick={() => deleteFile(file.fileId)}
-                    className="text-red-500"
-                  >
+                  <button onClick={() => deleteFile(file.fileId)} className="text-red-400">
                     <Trash size={16} />
                   </button>
                 </div>
               </li>
             ))}
           </ul>
-          <button
-            className="mt-4 bg-blue-500 text-white py-2 px-4 rounded"
-            onClick={createCodeFile}
-          >
-            Create New Editor
+          <button className="mt-4 bg-blue-500 text-white py-2 px-4 rounded" onClick={createCodeFile}>
+            New File
           </button>
-          <button
-            className="mt-4 bg-green-500 text-white py-2 px-4 rounded"
-            onClick={saveCode}
-          >
+          <button className="mt-2 bg-green-500 text-white py-2 px-4 rounded" onClick={saveCode}>
             Save Code
           </button>
         </div>
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-xl font-bold">Chat</h2>
-        <div className="space-y-2 mb-4">
-          {messages.map((msg, index) => (
-            <div key={index} className="text-sm text-gray-700">
-              {msg}
-            </div>
-          ))}
+  
+        {/* Main Editor & Console Section */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Code Editor */}
+          <div className="flex-1 p-4 overflow-auto bg-[#282c34] scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            <CodeMirror
+              value={code}
+              extensions={[language]}
+              theme={oneDark}
+              onChange={handleCodeChange}
+              className="h-full w-full"
+            />
+          </div>
+  
+          {/* Console */}
+          <div className="h-40 bg-gray-800 p-4 overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            <h3 className="font-bold">Output</h3>
+            <pre className="text-sm">{output}</pre>
+          </div>
+  
+          {/* Run Button */}
+          <div className="p-2 bg-gray-800 text-right">
+            <button onClick={runCode} className="bg-green-500 text-white py-2 px-4 rounded">
+              Run Code
+            </button>
+          </div>
         </div>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            className="border p-2 w-full"
-            placeholder="Type your message..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <button
-            onClick={sendMessage}
-            className="bg-blue-500 text-white py-2 px-4 rounded"
-          >
-            Send
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <button
-          onClick={runCode}
-          className="bg-green-500 text-white py-2 px-4 rounded"
-        >
-          Run Code
-        </button>
-        <div className="mt-4 bg-gray-800 text-white p-4 rounded overflow-auto">
-          <h3 className="font-bold">Output</h3>
-          <pre>{output}</pre>
+  
+        {/* Right Sidebar - Chat */}
+        <div className="w-80 bg-gray-800 p-4 flex flex-col">
+          <h2 className="text-lg font-bold">Chat</h2>
+          <div className="flex-grow space-y-2 mb-4 overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            {messages.map((msg, index) => (
+              <div key={index} className="text-sm text-gray-300">{msg}</div>
+            ))}
+          </div>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              className="border p-2 w-full bg-gray-700 text-white"
+              placeholder="Type your message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <button onClick={sendMessage} className="bg-blue-500 text-white py-2 px-4 rounded">
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+  
 };
 
 export default CollaborationWorkspace;
