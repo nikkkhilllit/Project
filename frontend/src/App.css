@@ -37,6 +37,13 @@
   }
 }
 
+.canvas-container {
+  position: relative;
+  height: 20px;
+  width: 100%;
+}
+
+
 @layer utilities {
   .scrollbar::-webkit-scrollbar {
     width: 8px;

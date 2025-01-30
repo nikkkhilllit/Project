@@ -11,6 +11,7 @@ import CollaborationWorkspace from './pages/CollaborationWorkspace';
 import ApplicantsPage from './components/ApplicantsPage';
 import Rating from './components/Rating';
 import RatingPage from './components/RatingPage';
+import TaskDetails from './components/TaskDetails';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('authToken'); // Check for 'authToken'
@@ -80,6 +81,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RatingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/status/:taskId"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <TaskDetails />
             </ProtectedRoute>
           }
         />

@@ -553,4 +553,150 @@ router.post('/:taskId/complete', authenticateToken, async (req, res) => {
   }
 });
 
+// backend/routes/projects.js
+router.get('/taskcomplete/:taskId', authenticateToken, async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    // Find the project containing the task
+    const project = await Project.findOne({ 'tasks.taskId': taskId });
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Find the task within the project
+    const task = project.tasks.find((t) => t.taskId === taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.error('Error fetching task details:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/:taskId/complete', authenticateToken, async (req, res) => {
+  const { taskId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const project = await Project.findOne({ 'tasks.taskId': taskId });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const task = project.tasks.find((t) => t.taskId.toString() === taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+
+    // Check if the user is a collaborator
+    if (!task.collaborators.some((collabId) => collabId.equals(userIdObj))) {
+      return res.status(403).json({ message: 'Forbidden: Not a collaborator' });
+    }
+
+    // Check if the user has already marked their completion
+    const existingCompletion = task.collaboratorCompletion.find(comp => comp.userId.equals(userIdObj));
+    if (existingCompletion) {
+      return res.status(400).json({ message: 'Already marked as completed' });
+    }
+
+    // Mark the collaborator's part as completed
+    task.collaboratorCompletion.push({ userId: userIdObj, completed: true });
+
+    // Save the updated project
+    await project.save();
+
+    // Return the updated task (without marking the whole task as completed)
+    res.status(200).json({ message: 'Your part has been marked as completed', task });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/:taskId/collaborators/:userId', authenticateToken, async (req, res) => {
+  const { taskId, userId } = req.params;
+
+  try {
+    const project = await Project.findOne({ 'tasks.taskId': taskId });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const task = project.tasks.find((t) => t.taskId === taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    // Validate userId and add to collaborators
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    task.collaborators.push(userIdObj); // Add as ObjectId
+    await project.save();
+
+    res.status(200).json({ message: 'Collaborator added' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// backend/routes/projects.js
+router.get('/gettask/:taskId', authenticateToken, async (req, res) => {
+  try {
+    const project = await Project.findOne({ 'tasks.taskId': req.params.taskId })
+      .populate('createdBy', '_id username')
+      .populate('tasks.collaborators', '_id username')
+      .populate('tasks.collaboratorCompletion.userId', '_id username');
+
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const task = project.tasks.find(t => t.taskId === req.params.taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    // Transform the task object for better frontend consumption
+    const transformedTask = {
+      ...task.toObject(),
+      createdBy: project.createdBy,
+      collaborators: task.collaborators.map(c => ({
+        _id: c._id,
+        username: c.username
+      })),
+      collaboratorCompletion: task.collaboratorCompletion.map(comp => ({
+        completed: comp.completed,
+        userId: {
+          _id: comp.userId._id,
+          username: comp.userId.username
+        }
+      }))
+    };
+
+    res.json(transformedTask);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// backend/routes/projects.js
+router.post('/:taskId/final-complete', authenticateToken, async (req, res) => {
+  try {
+    const project = await Project.findOne({ 'tasks.taskId': req.params.taskId });
+    const task = project.tasks.find(t => t.taskId === req.params.taskId);
+    
+    if (project.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Only the creator can finalize the task' });
+    }
+
+    task.status = 'completed';
+    task.completedOn = new Date();
+    await project.save();
+
+    res.json({ message: 'Task marked as completed', task });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Navigate } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { Bar, Radar } from 'react-chartjs-2';
+import { Radar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
+
 Chart.register(...registerables);
 
 const Dashboard = () => {
@@ -22,20 +21,22 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const getUserData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/auth/user', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUserData(response.data.user);
+        const headers = { Authorization: `Bearer ${token}` };
         
-        // Fetch stats after user data is loaded
-        const statsResponse = await axios.get('http://localhost:5000/auth/user-stats', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Single stats endpoint
+        const statsResponse = await axios.get('http://localhost:5000/auth/user-stats', { headers });
         setStats(statsResponse.data);
-        
+  
+        // Keep user data separate
+        const userResponse = await axios.get('http://localhost:5000/auth/user', { headers });
+        setUserData(userResponse.data.user);
+  
+        console.log('Stats response:', statsResponse.data);
+        console.log('User response:', userResponse.data);
       } catch (error) {
+        console.error('Error details:', error.response?.data || error.message);
         setError('Error fetching data');
       } finally {
         setLoading(false);
@@ -43,23 +44,15 @@ const Dashboard = () => {
     };
 
     if (token) {
-      getUserData();
+      fetchData();
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-
-  if (error) {
-    return <p>{error}</p>;
-  }
+  if (loading) return <p>Loading...</p>;
+  if (!token) return <Navigate to="/login" />;
+  if (error) return <p>{error}</p>;
 
   // Skill Radar Chart Data
   const skillData = {
@@ -91,11 +84,18 @@ const Dashboard = () => {
 
         {/* Statistics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-800 p-4 rounded-lg">
-            <h3 className="text-gray-400">Task Completion</h3>
-            <p className="text-2xl">{stats?.completedTasks || 0}/{stats?.totalTasks || 0}</p>
-            <p className="text-green-500">{stats?.onTimeRate || 0}% On Time</p>
-          </div>
+        <div className="bg-gray-800 p-4 rounded-lg">
+  <h3 className="text-gray-400">Task Completion</h3>
+  <p className="text-2xl">
+    {stats?.completedTasks || 0}/{stats?.totalTasks || 0}
+  </p>
+  <p className="text-green-500">
+    {stats?.onTimeRate || 0}% On Time
+  </p>
+  {stats?.totalTasks === 0 && (
+    <p className="text-sm text-gray-400">No tasks found.</p>
+  )}
+</div>
           <div className="bg-gray-800 p-4 rounded-lg">
             <h3 className="text-gray-400">Average Rating</h3>
             <p className="text-2xl">{stats?.averageRating?.toFixed(1) || 'N/A'}/5</p>
@@ -107,7 +107,7 @@ const Dashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="bg-gray-800 p-4 rounded-lg mb-8">
+        <div className="bg-gray-800 p-4 rounded-lg mb-8 canvas-container">
           <h3 className="text-xl font-semibold mb-4">Skill Distribution</h3>
           <Radar 
             data={skillData} 
@@ -121,9 +121,10 @@ const Dashboard = () => {
                 }
               }
             }}
-            height={400}
+            
           />
         </div>
+
 
         {/* Recent Activity Section */}
         <div className="bg-gray-800 p-4 rounded-lg">
@@ -146,6 +147,13 @@ const Dashboard = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Logout Button */}
+        <div className="text-center mt-6">
+          <button onClick={handleLogout} className="bg-red-600 px-4 py-2 rounded-lg">
+            Logout
+          </button>
         </div>
       </div>
     </div>

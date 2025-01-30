@@ -188,14 +188,14 @@ const ProjectDetails = () => {
             <div className="flex flex-col items-start">
               <div>
                 {/* Conditionally render Apply button if user is not a collaborator or creator */}
-                {!isCreator && !task.collaborators.some(collab => collab.toString() === currentUser?._id) && (
-                  <button
-                    onClick={() => handleApplyForTask(task.taskId)}
-                    className="bg-green-500 text-white px-4 py-2 rounded mt-2 transform transition-all duration-300 hover:scale-105"
-                  >
-                    Apply for Task
-                  </button>
-                )}
+                {!isCreator && !task.collaborators?.some(collab => collab.toString() === currentUser?._id) && (
+  <button
+    onClick={() => handleApplyForTask(task.taskId)}
+    className="bg-green-500 text-white px-4 py-2 rounded mt-2 transform transition-all duration-300 hover:scale-105"
+  >
+    Apply for Task
+  </button>
+)}
               </div>
               <div>
                 {/* Show "Go to Collaboration Workspace" link if the user is a collaborator or creator */}
@@ -217,9 +217,9 @@ const ProjectDetails = () => {
 )}
               </div>
               
-              <div className="px-3">
+              <div className="">
                 {isCreator && (
-                  <Link to={`/applicants/${task.taskId}`} className="text-blue-500 underline transform transition-all duration-300 hover:scale-105">
+                  <Link to={`/applicants/${task.taskId}`} className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white">
                     View Applicants
                   </Link>
                 )}
@@ -238,6 +238,22 @@ const ProjectDetails = () => {
   className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
 >
   Rate Collaborators
+</Link>
+)}
+{isCreator && (
+              <Link
+  to={`/status/${task.taskId}`}
+  className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
+>
+  Status
+</Link>
+)}
+{task.collaborators.some(collab => collab.toString() === currentUser?._id) && (
+              <Link
+  to={`/status/${task.taskId}`}
+  className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
+>
+  Status
 </Link>
 )}
             </div>

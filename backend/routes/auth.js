@@ -82,10 +82,12 @@ router.get('/user', authenticateToken, async (req, res) => {
   }
 });
 
+// backend/routes/auth.js (modified)
 router.get('/user-stats', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id; // Changed from _id to id
+    const userId = req.user.id;
 
+    // Find user with populated projects and tasks
     const user = await User.findById(userId)
       .populate({
         path: 'projects',
@@ -94,23 +96,46 @@ router.get('/user-stats', authenticateToken, async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const completedTasks = user.completedTasks;
-    const totalTasks = user.projects.reduce((acc, project) => acc + (project.tasks?.length || 0), 0);
-    
-    // Handle division by zero
-    const onTimeRate = completedTasks > 0 
-      ? ((completedTasks - user.overdueTasks) / completedTasks * 100).toFixed(1)
-      : 0;
+    // Initialize counters
+    let completedTasks = 0;
+    let totalTasks = 0;
+    let onTimeTasks = 0;
 
-    const skillCounts = {};
+    // Calculate task metrics
     user.projects.forEach(project => {
-      project.tasks?.forEach(task => {
-        task.skills?.forEach(skill => {
-          skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          totalTasks++;
+          if (task.status === 'completed') {
+            completedTasks++;
+            if (task.completedOn && task.deadline && task.completedOn <= task.deadline) {
+              onTimeTasks++;
+            }
+          }
         });
-      });
+      }
     });
 
+    // Calculate on-time rate
+    const onTimeRate = completedTasks > 0 
+      ? Math.round((onTimeTasks / completedTasks) * 100)
+      : 0;
+
+    // Calculate skill distribution
+    const skillCounts = {};
+    user.projects.forEach(project => {
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          if (task.skills && task.skills.length > 0) {
+            task.skills.forEach(skill => {
+              skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+            });
+          }
+        });
+      }
+    });
+
+    // Send response
     res.json({
       completedTasks,
       totalTasks,
@@ -120,15 +145,10 @@ router.get('/user-stats', authenticateToken, async (req, res) => {
       recentActivity: getRecentActivity(user.projects),
       streakDays: user.streakDays
     });
-    
+
   } catch (error) {
     console.error('Error in /user-stats:', error);
-    res.status(500).json({ 
-      error: 'Server error',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ error: 'Server error' });
   }
 });
-
 module.exports = router;

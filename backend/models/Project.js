@@ -21,10 +21,10 @@ const taskSchema = new mongoose.Schema({
     {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       completed: { type: Boolean, default: false },
-      completedOn: { type: Date }, // Timestamp when the collaborator marked as completed
+      completedOn: { type: Date }, 
     },
   ],
-  completedOn: { type: Date }, // Timestamp when the task is fully completed
+  completedOn: { type: Date },
 });
 
 const projectSchema = new mongoose.Schema({
@@ -38,4 +38,4 @@ const projectSchema = new mongoose.Schema({
 });
 
 const Project = mongoose.model('Project', projectSchema);
-module.exports = Project; //  Correctly exporting only the Project model
+module.exports = Project; 

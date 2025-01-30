@@ -1,12 +1,11 @@
-// backend/models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  skills: [String], // Add skills tracking
-  ratings: [ // Track ratings from collaborators
+  skills: [String], 
+  ratings: [ 
     {
       ratedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       score: { type: Number, min: 1, max: 5 },
@@ -15,8 +14,8 @@ const userSchema = new mongoose.Schema({
   ],
   completedTasks: { type: Number, default: 0 },
   overdueTasks: { type: Number, default: 0 },
-  streakDays: { type: Number, default: 0 }, // For gamification
-  lastTaskDate: { type: Date }, // Track streaks
+  streakDays: { type: Number, default: 0 }, 
+  lastTaskDate: { type: Date }, 
   projects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }]
 });
 
