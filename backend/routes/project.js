@@ -3,6 +3,8 @@ const router = express.Router();
 const Project = require('../models/Project');
 const authenticateToken = require('../middleware/authenticateToken'); // Assuming you have the middleware
 const { v4: uuidv4 } = require('uuid');
+const User = require('../models/User'); // Adjust the path if necessary
+
 
 // Create a new project
 router.post('/create', authenticateToken, async (req, res) => {
@@ -436,4 +438,119 @@ router.get('/task/:taskId', authenticateToken, async (req, res) => {
   }
 });
   
+router.post('/rate', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, collaboratorId, rating } = req.body;
+
+    // Update the collaborator's ratings
+    await User.findByIdAndUpdate(collaboratorId, {
+      $push: {
+        ratings: {
+          ratedBy: req.user._id,
+          score: rating,
+        },
+      },
+    });
+
+    res.json({ message: 'Rating submitted!' });
+  } catch (error) {
+    res.status(500).json({ error: 'Rating failed' });
+  }
+});
+
+// backend/routes/projects.js
+// backend/routes/projects.js
+router.get('/:taskId/collaborators', authenticateToken, async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    // Find the project containing the task
+    const project = await Project.findOne({ 'tasks.taskId': taskId });
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Find the task within the project
+    const task = project.tasks.find((t) => t.taskId === taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Fetch collaborator details
+    const collaborators = await User.find({
+      _id: { $in: task.collaborators },
+    }).select('-password'); // Exclude sensitive data
+
+    res.status(200).json({ collaborators });
+  } catch (error) {
+    console.error('Error fetching collaborators:', error); // Log the full error
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message, // Include error details in the response
+    });
+  }
+});
+
+// backend/routes/projects.js
+router.post('/:taskId/complete', authenticateToken, async (req, res) => {
+  const { taskId } = req.params;
+  const userId = req.user.id; // Get the user ID from the token
+
+  try {
+    // Find the project containing the task
+    const project = await Project.findOne({ 'tasks.taskId': taskId });
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Find the task within the project
+    const task = project.tasks.find((t) => t.taskId === taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if the user is a collaborator
+    if (!task.collaborators.includes(userId)) {
+      return res.status(403).json({ message: 'You are not a collaborator for this task' });
+    }
+
+    // Update the collaborator's completion status
+    const collaboratorCompletion = task.collaboratorCompletion.find(
+      (entry) => entry.userId.toString() === userId
+    );
+
+    if (collaboratorCompletion) {
+      collaboratorCompletion.completed = true;
+      collaboratorCompletion.completedOn = new Date();
+    } else {
+      task.collaboratorCompletion.push({
+        userId,
+        completed: true,
+        completedOn: new Date(),
+      });
+    }
+
+    // Check if all collaborators have completed their part
+    const allCollaboratorsCompleted = task.collaborators.every((collaboratorId) => {
+      return task.collaboratorCompletion.some(
+        (entry) => entry.userId.toString() === collaboratorId.toString() && entry.completed
+      );
+    });
+
+    // If all collaborators have completed, mark the task as completed
+    if (allCollaboratorsCompleted) {
+      task.status = 'completed';
+      task.completedOn = new Date();
+    }
+
+    // Save the updated project
+    await project.save();
+
+    res.status(200).json({ message: 'Task completion status updated', task });
+  } catch (error) {
+    console.error('Error updating task completion:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

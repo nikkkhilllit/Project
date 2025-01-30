@@ -15,8 +15,16 @@ const taskSchema = new mongoose.Schema({
       content: { type: String, default: '' },
     },
   ],
-  applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],  // Store user references
-  collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]  // Store user references
+  applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  collaboratorCompletion: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      completed: { type: Boolean, default: false },
+      completedOn: { type: Date }, // Timestamp when the collaborator marked as completed
+    },
+  ],
+  completedOn: { type: Date }, // Timestamp when the task is fully completed
 });
 
 const projectSchema = new mongoose.Schema({
@@ -29,4 +37,5 @@ const projectSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Project', projectSchema);
+const Project = mongoose.model('Project', projectSchema);
+module.exports = Project; //  Correctly exporting only the Project model

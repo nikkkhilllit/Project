@@ -224,6 +224,22 @@ const ProjectDetails = () => {
                   </Link>
                 )}
               </div>
+              {isCreator && (
+              <Link
+  to={`/rate/${task.taskId}`}
+  className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
+>
+  Rate Collaborators
+</Link>
+)}
+{task.collaborators.some(collab => collab.toString() === currentUser?._id) && (
+              <Link
+  to={`/rate/${task.taskId}`}
+  className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
+>
+  Rate Collaborators
+</Link>
+)}
             </div>
           </div>
         ))}
