@@ -169,8 +169,16 @@ const CollaborationWorkspace = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
       );
       alert('Code saved successfully!');
+      const streakResponse = await axios.post(
+        `http://localhost:5000/auth/update-streak`,
+        {}, // No body is required unless you wish to send extra data.
+        { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
+      );
+      console.log('Updated streak:', streakResponse.data.streakDays);
+      // Optionally update local UI state if you wish to display the new streak.
     } catch (error) {
       console.error('Error saving code:', error);
+      alert('Failed to save code. Check console for details.');
     }
   };
 

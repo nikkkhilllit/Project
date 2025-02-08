@@ -1,7 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');  // Assuming your User model is in a separate file
+const User = require('../models/User');
+const Project = require('../models/Project');  
+const mongoose = require('mongoose');
 const router = express.Router();
 
 // Middleware to authenticate the user based on JWT
@@ -149,6 +151,162 @@ router.get('/user-stats', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error in /user-stats:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/add-skill', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { skill } = req.body;
+
+  if (!skill || typeof skill !== 'string') {
+    return res.status(400).json({ message: 'A valid skill is required.' });
+  }
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $push: { skills: skill } },
+      { new: true }
+    ).select('-password');
+
+    res.status(200).json({ message: 'Skill added successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Error adding skill:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/completed-task-count', authenticateToken, async (req, res) => {
+  try {
+    // Find the user by id (provided by the auth middleware)
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    // Return the completedTasks count
+    res.status(200).json({ completedTasksCount: user.completedTasks });
+  } catch (error) {
+    console.error('Error fetching completed task count:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/collaborator-task-count', authenticateToken, async (req, res) => {
+  try {
+    // Convert the user id from string to ObjectId using 'new'
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    // Use aggregation to unwind the tasks array and filter tasks where the user is a collaborator
+    const result = await Project.aggregate([
+      { $unwind: "$tasks" },
+      { $match: { "tasks.collaborators": userId } },
+      { $count: "taskCount" }
+    ]);
+
+    // If no tasks found, result will be an empty array.
+    const count = result.length > 0 ? result[0].taskCount : 0;
+
+    res.status(200).json({ collaboratorTaskCount: count });
+  } catch (error) {
+    console.error("Error fetching collaborator task count:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get('/collaborator-on-time-rate', authenticateToken, async (req, res) => {
+  try {
+    // Find all projects that have at least one task where the user is a collaborator.
+    // (This assumes that any project where the user is involved as a collaborator
+    // is stored in the projects collection. If not, adjust the query accordingly.)
+    const projects = await Project.find({ "tasks.collaborators": req.user.id }).lean();
+
+    let totalCollaboratorTasks = 0;
+    let totalOnTime = 0;
+
+    // Iterate over each project and each task.
+    projects.forEach(project => {
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          // Check if the current user is a collaborator in this task.
+          // Convert collaborator IDs to strings for comparison.
+          if (task.collaborators && task.collaborators.map(id => id.toString()).includes(req.user.id)) {
+            totalCollaboratorTasks++;
+            // If the task is completed and has both a completedOn date and a deadline,
+            // and the task was completed on or before its deadline, count it as on time.
+            if (
+              task.status === 'completed' &&
+              task.completedOn &&
+              task.deadline &&
+              new Date(task.completedOn) <= new Date(task.deadline)
+            ) {
+              totalOnTime++;
+            }
+          }
+        });
+      }
+    });
+
+    // Calculate the on-time rate percentage.
+    const onTimeRate = totalCollaboratorTasks > 0 ? Math.round((totalOnTime / totalCollaboratorTasks) * 100) : 0;
+
+    res.status(200).json({ onTimeRate });
+  } catch (error) {
+    console.error("Error calculating collaborator on time rate:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post('/update-streak', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // --- Data Cleanup: Ensure all ratings have a score of at least 1 ---
+    if (Array.isArray(user.ratings)) {
+      user.ratings = user.ratings.map(rating => {
+        if (rating.score < 1) {
+          rating.score = 1;
+        }
+        return rating;
+      });
+    }
+    
+    // Consider the current date as the event date and normalize the time.
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    let lastDate = user.lastTaskDate ? new Date(user.lastTaskDate) : null;
+    if (lastDate) {
+      lastDate.setHours(0, 0, 0, 0);
+    }
+    
+    if (!lastDate) {
+      // No previous streak exists, so initialize streak to 1.
+      user.streakDays = 1;
+    } else {
+      // Calculate the difference in days between the current date and the last task date.
+      const diffInDays = (currentDate - lastDate) / (1000 * 60 * 60 * 24);
+      
+      if (diffInDays === 0) {
+        // Same day event – we don't change the streak.
+      } else if (diffInDays === 1) {
+        // Consecutive day event: increment the streak.
+        user.streakDays += 1;
+      } else if (diffInDays > 1) {
+        // More than one day has passed: reset the streak.
+        user.streakDays = 1;
+      }
+    }
+    
+    // Update the lastTaskDate to the current date.
+    user.lastTaskDate = currentDate;
+    
+    await user.save();
+    
+    res.status(200).json({ streakDays: user.streakDays });
+  } catch (error) {
+    console.error('Error updating streak:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 module.exports = router;

@@ -514,20 +514,29 @@ router.post('/:taskId/complete', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'You are not a collaborator for this task' });
     }
 
+    // Flag to determine if this is a new completion update
+    let isNewCompletion = false;
+
     // Update the collaborator's completion status
     const collaboratorCompletion = task.collaboratorCompletion.find(
       (entry) => entry.userId.toString() === userId
     );
 
     if (collaboratorCompletion) {
-      collaboratorCompletion.completed = true;
-      collaboratorCompletion.completedOn = new Date();
+      // Only update if the task wasn’t already marked complete for this user
+      if (!collaboratorCompletion.completed) {
+        collaboratorCompletion.completed = true;
+        collaboratorCompletion.completedOn = new Date();
+        isNewCompletion = true;
+      }
     } else {
+      // First time completion for this collaborator
       task.collaboratorCompletion.push({
         userId,
         completed: true,
         completedOn: new Date(),
       });
+      isNewCompletion = true;
     }
 
     // Check if all collaborators have completed their part
@@ -545,6 +554,12 @@ router.post('/:taskId/complete', authenticateToken, async (req, res) => {
 
     // Save the updated project
     await project.save();
+
+    // If this is the first time the user is marking this task complete,
+    // update the collaborator's user schema to increment completedTasks.
+    if (isNewCompletion) {
+      await User.findByIdAndUpdate(userId, { $inc: { completedTasks: 1 } });
+    }
 
     res.status(200).json({ message: 'Task completion status updated', task });
   } catch (error) {
@@ -573,44 +588,6 @@ router.get('/taskcomplete/:taskId', authenticateToken, async (req, res) => {
     res.status(200).json(task);
   } catch (error) {
     console.error('Error fetching task details:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.post('/:taskId/complete', authenticateToken, async (req, res) => {
-  const { taskId } = req.params;
-  const userId = req.user.id;
-
-  try {
-    const project = await Project.findOne({ 'tasks.taskId': taskId });
-    if (!project) return res.status(404).json({ message: 'Project not found' });
-
-    const task = project.tasks.find((t) => t.taskId.toString() === taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-
-    // Check if the user is a collaborator
-    if (!task.collaborators.some((collabId) => collabId.equals(userIdObj))) {
-      return res.status(403).json({ message: 'Forbidden: Not a collaborator' });
-    }
-
-    // Check if the user has already marked their completion
-    const existingCompletion = task.collaboratorCompletion.find(comp => comp.userId.equals(userIdObj));
-    if (existingCompletion) {
-      return res.status(400).json({ message: 'Already marked as completed' });
-    }
-
-    // Mark the collaborator's part as completed
-    task.collaboratorCompletion.push({ userId: userIdObj, completed: true });
-
-    // Save the updated project
-    await project.save();
-
-    // Return the updated task (without marking the whole task as completed)
-    res.status(200).json({ message: 'Your part has been marked as completed', task });
-  } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
