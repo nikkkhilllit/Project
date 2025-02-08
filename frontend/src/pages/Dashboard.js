@@ -16,9 +16,13 @@ const Dashboard = () => {
   const [collaboratorOnTimeRate, setCollaboratorOnTimeRate] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [newSkill, setNewSkill] = useState('');
+  
+  // For adding a new skill, we capture both the name and percentage.
+  const [newSkillName, setNewSkillName] = useState('');
+  const [newSkillPercentage, setNewSkillPercentage] = useState('');
   const [skillError, setSkillError] = useState('');
   const [showSkillForm, setShowSkillForm] = useState(false);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem('authToken');
 
@@ -76,24 +80,34 @@ const Dashboard = () => {
   const handleAddSkill = async (e) => {
     e.preventDefault();
 
-    if (!newSkill.trim()) {
-      setSkillError('Skill cannot be empty.');
+    // Both fields are required.
+    if (!newSkillName.trim() || !newSkillPercentage.trim()) {
+      setSkillError('Both skill name and proficiency percentage are required.');
+      return;
+    }
+
+    // Validate that the percentage is a number between 0 and 100.
+    const percentage = Number(newSkillPercentage);
+    if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+      setSkillError('Please enter a valid percentage (0 to 100).');
       return;
     }
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Call the backend endpoint to add a new skill
+      // Call the backend endpoint to add a new skill.
+      // The backend should be updated to accept a skill object: { name, percentage }
       const response = await axios.post(
         'http://localhost:5000/auth/add-skill',
-        { skill: newSkill.trim() },
+        { skill: { name: newSkillName.trim(), percentage } },
         { headers }
       );
 
-      // Update userData with the new skills array from the response
+      // Update userData with the new skills array from the response.
       setUserData((prev) => ({ ...prev, skills: response.data.user.skills }));
-      setNewSkill('');
+      setNewSkillName('');
+      setNewSkillPercentage('');
       setSkillError('');
       setShowSkillForm(false);
     } catch (error) {
@@ -106,28 +120,75 @@ const Dashboard = () => {
   if (!token) return <Navigate to="/login" />;
   if (error) return <p>{error}</p>;
 
-  // Compute a skill distribution from the user's skills array.
+  // With the new schema, userData.skills is an array of objects { name, percentage }
   const userSkills = userData?.skills || [];
-  const computedSkillDistribution = userSkills.reduce((acc, skill) => {
-    acc[skill] = (acc[skill] || 0) + 1;
-    return acc;
-  }, {});
 
-  // Prepare data for the Radar/Bar chart based on the computed skill distribution.
+  // Prepare data for the Bar chart based on the provided percentage for each skill.
   const skillData = {
-    labels: Object.keys(computedSkillDistribution),
+    labels: userSkills.map(skill => skill.name),
     datasets: [
       {
-        label: 'Your Skills',
-        data: Object.values(computedSkillDistribution),
+        label: 'Skill Proficiency (%)',
+        data: userSkills.map(skill => skill.percentage),
         backgroundColor: 'rgba(99, 102, 241, 0.2)',
         borderColor: '#6366f1',
+        borderWidth: 1,
       },
     ],
   };
 
+  // Chart options remain the same.
+  const skillChartOptions = {
+    maintainAspectRatio: false,
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          callback: (value) => `${value}%`,
+          color: 'white',
+        },
+        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      },
+      x: {
+        ticks: { color: 'white' },
+        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      },
+    },
+  };
+
   return (
     <div className="bg-gray-900 min-h-screen text-white">
+      {/* Custom CSS in this file */}
+      <style>{`
+        .my-horiz-scroll {
+          overflow-x: auto;
+          overflow-y: hidden;
+          height: 400px; 
+          scrollbar-gutter: stable;
+          background-color: #252527; /* Track background so it's visible */
+        }
+        .my-horiz-scroll::-webkit-scrollbar {
+          height: 10px;
+        }
+        .my-horiz-scroll::-webkit-scrollbar-track {
+          background: #2d2d2d;
+          border-radius: 5px;
+        }
+        .my-horiz-scroll::-webkit-scrollbar-thumb {
+          background: #4a90e2;
+          border-radius: 5px;
+          border: 2px solid #2d2d2d;
+        }
+        .my-horiz-scroll::-webkit-scrollbar-thumb:hover {
+          background: #357ABD;
+        }
+        .my-horiz-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #4a90e2 #2d2d2d;
+        }
+      `}</style>
       <Navbar />
       <div className="max-w-6xl mx-auto mt-10 p-6">
         <h2 className="text-3xl font-semibold text-center mb-6">Dashboard</h2>
@@ -152,7 +213,6 @@ const Dashboard = () => {
             <p className="text-2xl">
               {completedTaskCount}/{collaboratorTaskCount || 0}
             </p>
-            {/* Use the collaborator on-time rate from our new route */}
             <p className="text-green-500">{collaboratorOnTimeRate}% On Time</p>
             {collaboratorTaskCount === 0 && <p className="text-sm text-gray-400">No tasks found.</p>}
           </div>
@@ -167,7 +227,7 @@ const Dashboard = () => {
         </div>
 
         {/* Skill Distribution Section */}
-        <div className="bg-gray-800 p-4 rounded-lg mb-8" style={{ height: '400px', width: '100%' }}>
+        <div className="bg-gray-800 p-4 rounded-lg mb-8" style={{ width: '100%' }}>
           <h3 className="text-xl font-semibold mb-4">Skill Distribution</h3>
           {userSkills.length === 0 ? (
             <div>
@@ -175,9 +235,16 @@ const Dashboard = () => {
               <form onSubmit={handleAddSkill} className="flex flex-col gap-2">
                 <input
                   type="text"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  placeholder="Enter a skill"
+                  value={newSkillName}
+                  onChange={(e) => setNewSkillName(e.target.value)}
+                  placeholder="Enter skill name"
+                  className="p-2 rounded text-black"
+                />
+                <input
+                  type="number"
+                  value={newSkillPercentage}
+                  onChange={(e) => setNewSkillPercentage(e.target.value)}
+                  placeholder="Enter proficiency (%)"
                   className="p-2 rounded text-black"
                 />
                 {skillError && <p className="text-red-500">{skillError}</p>}
@@ -188,23 +255,14 @@ const Dashboard = () => {
             </div>
           ) : (
             <>
-              <Bar
-                data={skillData}
-                options={{
-                  maintainAspectRatio: false,
-                  responsive: true,
-                  scales: {
-                    x: {
-                      ticks: { color: 'white' },
-                      grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    },
-                    y: {
-                      ticks: { color: 'white' },
-                      grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    },
-                  },
-                }}
-              />
+              <div
+                className="my-horiz-scroll"
+                style={{ width: '100%' }}
+              >
+                <div style={{ minWidth: `${Math.max(userSkills.length, 6) * 200}px`, height: '100%' }}>
+                  <Bar data={skillData} options={skillChartOptions} />
+                </div>
+              </div>
               <button
                 onClick={() => setShowSkillForm(!showSkillForm)}
                 className="bg-blue-500 p-2 rounded mt-4"
@@ -216,9 +274,16 @@ const Dashboard = () => {
                   <form onSubmit={handleAddSkill} className="flex flex-col gap-2 mt-4">
                     <input
                       type="text"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      placeholder="Enter a new skill"
+                      value={newSkillName}
+                      onChange={(e) => setNewSkillName(e.target.value)}
+                      placeholder="Enter skill name"
+                      className="p-2 rounded text-black"
+                    />
+                    <input
+                      type="number"
+                      value={newSkillPercentage}
+                      onChange={(e) => setNewSkillPercentage(e.target.value)}
+                      placeholder="Enter proficiency (%)"
                       className="p-2 rounded text-black"
                     />
                     {skillError && <p className="text-red-500">{skillError}</p>}

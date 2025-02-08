@@ -45,22 +45,98 @@
 
 
 @layer utilities {
-  .scrollbar::-webkit-scrollbar {
-    width: 8px;
+  /* Custom scrollbar styling for elements with the "scrollbar" class */
+  .custom-scrollbar {
+    overflow-x: scroll;
+    overflow-y: hidden; /* hide vertical scrollbar if any */
+    scrollbar-gutter: stable; /* Reserve space for the scrollbar */
+    background-color: #2d2d2d; /* Force a background for the track to be visible */
+  }
+  
+  /* Webkit (Chrome, Safari, Edge) */
+  .custom-scrollbar::-webkit-scrollbar {
     height: 8px;
   }
-
-  .scrollbar::-webkit-scrollbar-track {
-    background: #2d2d2d; /* Dark background */
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #2d2d2d; /* Dark track */
     border-radius: 4px;
   }
-
-  .scrollbar::-webkit-scrollbar-thumb {
-    background: #4a90e2; /* Stylish blue thumb */
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4a90e2; /* Blue thumb */
     border-radius: 4px;
   }
-
-  .scrollbar::-webkit-scrollbar-thumb:hover {
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #357ABD; /* Darker blue on hover */
   }
+  
+  /* Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #4a90e2 #2d2d2d;
+  }
+/* Custom scrollbar styling for horizontal scrollbars */
+.scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+  background: #2d2d2d; /* Dark track */
+  border-radius: 4px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  background: #4a90e2; /* Stylish blue thumb */
+  border-radius: 4px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #357ABD;
+}
+
+/* For Firefox */
+.scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #4a90e2 #2d2d2d;
+  
+  /* Try to force the gutter to be stable */
+  scrollbar-gutter: stable;
+}
+
+
+.my-horiz-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 400px; /* Fixed height for your container */
+  scrollbar-gutter: stable; /* Reserve space for the scrollbar */
+}
+
+/* For Chrome, Safari, and Edge */
+.my-horiz-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.my-horiz-scroll::-webkit-scrollbar-track {
+  background: #1e1e1e;  /* Dark background for track */
+  border-radius: 5px;
+}
+
+.my-horiz-scroll::-webkit-scrollbar-thumb {
+  background: #888;  /* Light gray thumb */
+  border-radius: 5px;
+  border: 2px solid #1e1e1e; /* Creates a gap around the thumb */
+}
+
+.my-horiz-scroll::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* For Firefox */
+.my-horiz-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #1e1e1e;
+}
+
 }

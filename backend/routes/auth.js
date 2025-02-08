@@ -158,14 +158,25 @@ router.post('/add-skill', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { skill } = req.body;
 
-  if (!skill || typeof skill !== 'string') {
+  // Validate that skill is an object with a name and a valid percentage
+  if (
+    !skill ||
+    typeof skill !== 'object' ||
+    !skill.name ||
+    typeof skill.name !== 'string' ||
+    skill.name.trim() === '' ||
+    skill.percentage === undefined ||
+    typeof skill.percentage !== 'number' ||
+    skill.percentage < 0 ||
+    skill.percentage > 100
+  ) {
     return res.status(400).json({ message: 'A valid skill is required.' });
   }
 
   try {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $push: { skills: skill } },
+      { $push: { skills: { name: skill.name.trim(), percentage: skill.percentage } } },
       { new: true }
     ).select('-password');
 
