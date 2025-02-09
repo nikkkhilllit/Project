@@ -12,6 +12,9 @@ import ApplicantsPage from './components/ApplicantsPage';
 import Rating from './components/Rating';
 import RatingPage from './components/RatingPage';
 import TaskDetails from './components/TaskDetails';
+import AllUsers from './pages/AllUsers';
+import PopularProjects from './components/PopularProjects';
+import BrowsePage from './pages/BrowsePage';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('authToken'); // Check for 'authToken'
@@ -89,6 +92,30 @@ function App() {
           element={
             <ProtectedRoute>
               <TaskDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/topusers"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <AllUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/popularprojects"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <PopularProjects />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/browse"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <BrowsePage />
             </ProtectedRoute>
           }
         />

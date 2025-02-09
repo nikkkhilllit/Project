@@ -11,7 +11,8 @@ const authenticateToken = (req, res, next) => {
   const token = req.header('Authorization')?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Access Denied' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  // Set maxAge to '7d' to allow tokens that are at most 7 days old.
+  jwt.verify(token, process.env.JWT_SECRET, { maxAge: '7d' }, (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid Token' });
     req.user = user;
     next();
@@ -54,19 +55,31 @@ router.post('/register', async (req, res) => {
 
 // Login route
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
+    // Find the user by email
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.status(200).json({ message: 'Login successful', token });
-  } catch (err) {
-    console.log(err);
+    // Generate a token with the user's ID included.
+    const token = jwt.sign(
+      { id: user._id.toString(), username: user.username, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' } // Token valid for 7 days
+    );
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -320,4 +333,62 @@ router.post('/update-streak', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// GET /users - Fetch users sorted by weighted rating
+router.get('/users', authenticateToken, async (req, res) => {
+  try {
+    // 1. Compute the global average rating (C) only from users that actually have ratings.
+    const globalAvgResult = await User.aggregate([
+      { $match: { ratings: { $exists: true, $ne: [] } } },
+      { $unwind: "$ratings" },
+      { $group: { _id: null, avgRating: { $avg: "$ratings.score" } } }
+    ]);
+    const C = globalAvgResult[0]?.avgRating || 0;
+    const m = 5; // Threshold: minimum number of ratings for full confidence.
+
+    // 2. For each user, compute:
+    //    - v: the number of ratings (using $ifNull to treat missing ratings as an empty array)
+    //    - R: the average rating (if there are ratings, else 0)
+    //    - weightedRating: if v==0, then 0; otherwise, calculate the Bayesian weighted rating.
+    const usersSorted = await User.aggregate([
+      {
+        $addFields: {
+          v: { $size: { $ifNull: ["$ratings", []] } },
+          R: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ["$ratings", []] } }, 0] },
+              then: { $avg: "$ratings.score" },
+              else: 0
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          weightedRating: {
+            $cond: {
+              if: { $eq: ["$v", 0] },
+              then: 0,
+              else: {
+                $add: [
+                  { $multiply: [{ $divide: ["$v", { $add: ["$v", m] }] }, "$R"] },
+                  { $multiply: [{ $divide: [m, { $add: ["$v", m] }] }, C] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      { $sort: { weightedRating: -1 } }
+    ]);
+
+    res.status(200).json(usersSorted);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Server Error: Unable to fetch users by ratings',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

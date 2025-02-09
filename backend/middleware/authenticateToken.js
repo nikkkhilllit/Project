@@ -4,7 +4,8 @@ const authenticateToken = (req, res, next) => {
   const token = req.header('Authorization')?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Access Denied' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  // Set maxAge to '7d' to allow tokens that are at most 7 days old.
+  jwt.verify(token, process.env.JWT_SECRET, { maxAge: '7d' }, (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid Token' });
     req.user = user;
     next();

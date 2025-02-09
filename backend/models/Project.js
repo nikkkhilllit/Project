@@ -21,12 +21,13 @@ const taskSchema = new mongoose.Schema({
     {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       completed: { type: Boolean, default: false },
-      completedOn: { type: Date }, 
+      completedOn: { type: Date },
     },
   ],
   completedOn: { type: Date },
 });
 
+// Project Schema with "likes" field added
 const projectSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -35,6 +36,8 @@ const projectSchema = new mongoose.Schema({
   deadline: { type: Date, required: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
+  // New field: an array of User ObjectIds that liked the project
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 });
 
 const Project = mongoose.model('Project', projectSchema);

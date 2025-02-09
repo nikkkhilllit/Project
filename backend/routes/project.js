@@ -4,6 +4,7 @@ const Project = require('../models/Project');
 const authenticateToken = require('../middleware/authenticateToken'); // Assuming you have the middleware
 const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User'); // Adjust the path if necessary
+const mongoose = require('mongoose');
 
 
 // Create a new project
@@ -64,6 +65,22 @@ router.post('/:id/tasks', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/popular', async (req, res) => {
+  try {
+    const projects = await Project.aggregate([
+      {
+        $addFields: {
+          likesCount: { $size: { $ifNull: ["$likes", []] } }
+        }
+      },
+      { $sort: { likesCount: -1 } }
+    ]);
+    res.status(200).json({ projects });
+  } catch (error) {
+    console.error('Error fetching popular projects:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 
 router.get('/myprojects', authenticateToken, async (req, res) => {
@@ -675,5 +692,66 @@ router.post('/:taskId/final-complete', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+router.post('/:id/like', authenticateToken, async (req, res) => {
+  try {
+    // Use req.user.id or fall back to req.user._id
+    const userIdRaw = req.user.id || req.user._id;
+    console.log("Using user ID:", userIdRaw);
+    if (!userIdRaw) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // Ensure the userId is valid; if it’s a valid ObjectId string, Mongoose will cast it
+    if (!mongoose.Types.ObjectId.isValid(userIdRaw)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    // Use the 'new' keyword when creating an ObjectId instance
+    const userId = new mongoose.Types.ObjectId(userIdRaw);
+
+    // Validate the project ID
+    const projectId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: 'Invalid project ID' });
+    }
+
+    // Retrieve the project by its ID
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Retrieve the user document
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if the user has already liked this project by checking the user's likedProjects array.
+    // Convert each liked project ID to a string for reliable comparison.
+    if (user.likedProjects && user.likedProjects.some(p => p.toString() === projectId)) {
+      return res.status(400).json({ message: 'You have already liked this project' });
+    }
+
+    // Update the project: add the user's ID to the likes array using $addToSet.
+    const updatedProject = await Project.findByIdAndUpdate(
+      projectId,
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+
+    // Update the user: add the project ID to likedProjects using $addToSet.
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { likedProjects: projectId } }
+    );
+
+    res.status(200).json({ message: 'Project liked successfully', project: updatedProject });
+  } catch (error) {
+    console.error('Error liking project:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 
 module.exports = router;

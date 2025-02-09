@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema({
   overdueTasks:   { type: Number, default: 0 },
   streakDays:     { type: Number, default: 0 }, 
   lastTaskDate:   { type: Date }, 
-  projects:       [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }]
+  projects:       [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
+  likedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }]
 });
 
 const User = mongoose.model('User', userSchema);
