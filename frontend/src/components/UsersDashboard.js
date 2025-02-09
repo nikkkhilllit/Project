@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import { Radar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { FaEnvelope } from 'react-icons/fa'; // Import mail icon
 
 Chart.register(...registerables);
 
@@ -192,12 +193,20 @@ const UsersDashboard = () => {
         {userData && (
           <div className="bg-gray-800 p-6 rounded-lg shadow-md mb-8">
             <h3 className="text-xl font-semibold mb-4">User Info</h3>
-            <p className="text-gray-400">
-              User Name: <span className="text-blue-500">{userData.username}</span>
-            </p>
-            <p className="text-gray-400 mb-2">
-              Email: <span className="text-blue-500">{userData.email}</span>
-            </p>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-gray-400">
+                User Name: <span className="text-blue-500">{userData.username}</span>
+              </p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-gray-400">
+                Email: <span className="text-blue-500">{userData.email}</span>
+              </p>
+              {/* Mail box icon on the right. Clicking it opens the default mail client */}
+              <a href={`mailto:${userData.email}`} className="text-blue-500 hover:text-blue-400">
+                <FaEnvelope size={24} />
+              </a>
+            </div>
           </div>
         )}
 
@@ -227,7 +236,6 @@ const UsersDashboard = () => {
           {userSkills.length === 0 ? (
             <div>
               <p className="mb-4">No skills available.</p>
-              
             </div>
           ) : (
             <>

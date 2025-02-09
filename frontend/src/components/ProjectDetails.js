@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from './Navbar';
+import { Bar } from 'react-chartjs-2';
+import { Chart, registerables } from 'chart.js';
+import { FaUsers, FaListAlt, FaStar, FaInfoCircle, FaHeart } from 'react-icons/fa';
+
+Chart.register(...registerables);
 
 const ProjectDetails = () => {
   const { id } = useParams(); // Get project ID from URL
@@ -19,10 +24,11 @@ const ProjectDetails = () => {
   const [isCreator, setIsCreator] = useState(false);
   const [isCollaborator, setIsCollaborator] = useState(false);
 
+  const token = localStorage.getItem('authToken');
+
   // Fetch project details
   useEffect(() => {
     const fetchProject = async () => {
-      const token = localStorage.getItem('authToken'); // Get token from localStorage
       try {
         const response = await axios.get(`http://localhost:5000/projects/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -39,12 +45,11 @@ const ProjectDetails = () => {
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, token]);
 
   // Fetch current user data and check collaborator/creator status
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      const token = localStorage.getItem('authToken');
       try {
         const response = await axios.get('http://localhost:5000/auth/user', {
           headers: { Authorization: `Bearer ${token}` },
@@ -52,12 +57,10 @@ const ProjectDetails = () => {
         setCurrentUser(response.data.user);
 
         if (project) {
-          // Provide default empty arrays if tasks or collaborators are undefined.
           const { createdBy, tasks = [] } = project;
-          const isCreator =
-            createdBy && createdBy.toString() === response.data.user._id;
+          const isCreator = createdBy && createdBy.toString() === response.data.user._id;
+          // Check if the current user is a collaborator on any task.
           const isCollaborator = tasks.some((task) => {
-            // Default task.collaborators to an empty array if undefined.
             const collaborators = task.collaborators || [];
             return collaborators.some(
               (collaborator) =>
@@ -65,7 +68,6 @@ const ProjectDetails = () => {
                 collaborator.toString() === response.data.user._id
             );
           });
-
           setIsCollaboratorOrCreator(isCreator || isCollaborator);
           setIsCreator(isCreator);
           setIsCollaborator(isCollaborator);
@@ -79,7 +81,7 @@ const ProjectDetails = () => {
     if (project) {
       fetchCurrentUser();
     }
-  }, [id, project]);
+  }, [id, project, token]);
 
   const handleTaskChange = (e) => {
     const { name, value } = e.target;
@@ -93,7 +95,6 @@ const ProjectDetails = () => {
   };
 
   const handleAddTask = async () => {
-    const token = localStorage.getItem('authToken');
     try {
       const response = await axios.post(
         `http://localhost:5000/projects/${id}/tasks`,
@@ -117,7 +118,6 @@ const ProjectDetails = () => {
   };
 
   const handleApplyForTask = async (taskId) => {
-    const token = localStorage.getItem('authToken');
     try {
       const response = await axios.post(
         `http://localhost:5000/projects/${taskId}/apply`,
@@ -141,9 +141,8 @@ const ProjectDetails = () => {
     }
   };
 
-  // New: Handle "Like" button click
+  // Handle "Like" button click
   const handleLike = async () => {
-    const token = localStorage.getItem('authToken');
     try {
       const response = await axios.post(
         `http://localhost:5000/projects/${id}/like`,
@@ -174,35 +173,71 @@ const ProjectDetails = () => {
       (like) => like && like.toString() === currentUser._id
     );
 
+  // Prepare data for the Bar chart.
+  const userSkills = project?.skills || [];
+  const skillData = {
+    labels: userSkills.map((skill) => skill.name),
+    datasets: [
+      {
+        label: 'Skill Proficiency (%)',
+        data: userSkills.map((skill) => skill.percentage),
+        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const skillChartOptions = {
+    maintainAspectRatio: false,
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          callback: (value) => `${value}%`,
+          color: 'white',
+        },
+        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      },
+      x: {
+        ticks: { color: 'white' },
+        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      },
+    },
+  };
+
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       <Navbar />
       <div className="p-6 max-w-4xl mx-auto bg-gray-800 rounded-lg shadow-xl">
         {/* Project Title and Like Section */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold mb-4 text-white">
-            {project.title}
-          </h1>
+          <h1 className="text-3xl font-bold mb-4 text-white">{project.title}</h1>
           <div className="flex flex-col items-center gap-2">
             <button
               onClick={handleLike}
               disabled={alreadyLiked}
-              className="flex items-center justify-center"
+              className="flex items-center justify-center focus:outline-none"
             >
-              {/* Use an outlined heart (♡) when not liked, and a filled heart (♥) when liked */}
-              <span className="text-4xl text-white">
-                {alreadyLiked ? '♥' : '♡'}
-              </span>
+              {/* Using FaHeart with cool hover and animation effects */}
+              <FaHeart
+                size={28}
+                className={`transition transform hover:scale-110 ${
+                  alreadyLiked
+                    ? 'text-blue-500'
+                    : 'text-gray-300'
+                }`}
+              />
             </button>
-            {/* Display the total number of likes next to the icon */}
             <span className="text-white text-sm">
               Likes: {project.likes ? project.likes.length : 0}
             </span>
           </div>
         </div>
         <p className="text-gray-300 mb-4">
-          <span className="font-medium">Description:</span>{' '}
-          {project.description}
+          <span className="font-medium">Description:</span> {project.description}
         </p>
         <p className="text-gray-300 mb-4">
           <span className="font-medium">Budget:</span> ₹ {project.budget}
@@ -213,132 +248,108 @@ const ProjectDetails = () => {
         </p>
         <h2 className="text-2xl font-bold mb-4 text-white">Tasks</h2>
         {project.tasks && project.tasks.length === 0 ? (
-          <p className="text-gray-400">
-            No tasks assigned to this project.
-          </p>
+          <p className="text-gray-400">No tasks assigned to this project.</p>
         ) : (
           <div className="flex flex-col space-y-4">
-            {project.tasks && project.tasks.map((task, index) => (
-              <div
-                key={index}
-                className="border p-4 rounded-xl bg-gray-700 transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              >
-                <p className="text-white">
-                  <span className="font-medium">Task Title:</span> {task.title}
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-medium">Role:</span> {task.role}
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-medium">Skills:</span>{' '}
-                  {Array.isArray(task.skills)
-                    ? task.skills.join(', ')
-                    : task.skills}
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-medium">Deadline:</span>{' '}
-                  {new Date(task.deadline).toLocaleDateString()}
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-medium">Status:</span> {task.status}
-                </p>
-
-                {/* Apply Button and Collaboration Links */}
-                <div className="flex flex-col items-start">
-                  <div>
-                    {!isCreator &&
-                      !((task.collaborators || []).some(
-                        (collab) =>
-                          collab && collab.toString() === currentUser?._id
-                      )) && (
+            {project.tasks &&
+              project.tasks.map((task, index) => {
+                // Check if the current user is a collaborator for this task.
+                const isTaskCollaborator = (task.collaborators || []).some(
+                  (collab) =>
+                    collab && collab.toString() === currentUser?._id
+                );
+                return (
+                  <div
+                    key={index}
+                    className="border p-4 rounded-xl bg-gray-700 transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  >
+                    {/* Two-Column Layout for Task Card */}
+                    <div className="flex justify-between items-start">
+                      {/* Left Column: Task Details */}
+                      <div className="flex-1">
+                        <p className="text-white">
+                          <span className="font-medium">Task Title:</span> {task.title}
+                        </p>
+                        <p className="text-gray-300">
+                          <span className="font-medium">Role:</span> {task.role}
+                        </p>
+                        <p className="text-gray-300">
+                          <span className="font-medium">Skills:</span>{' '}
+                          {Array.isArray(task.skills)
+                            ? task.skills.join(', ')
+                            : task.skills}
+                        </p>
+                        <p className="text-gray-300">
+                          <span className="font-medium">Deadline:</span>{' '}
+                          {new Date(task.deadline).toLocaleDateString()}
+                        </p>
+                        <p className="text-gray-300">
+                          <span className="font-medium">Status:</span> {task.status}
+                        </p>
+                        {(isCreator || isTaskCollaborator) && (
+                          <Link
+                            to={`/collab/${task.taskId}`}
+                            className="flex items-center text-blue-500 transform transition-all duration-300 hover:scale-100 hover:text-white space-x-2 mt-2"
+                            title="Collaboration Workspace"
+                          >
+                            <FaUsers size={36} />
+                            <span className="text-sm">Collaborate</span>
+                          </Link>
+                        )}
+                      </div>
+                      {/* Right Column: Vertical Icons */}
+                      {(isCreator || isTaskCollaborator) && (
+                        <div className="flex flex-col items-center space-y-2 ml-4">
+                          {isCreator && (
+                            <Link
+                              to={`/applicants/${task.taskId}`}
+                              className="text-blue-500 transform transition-all duration-300 hover:scale-110 hover:text-white"
+                              title="View Applicants"
+                            >
+                              <FaListAlt size={24} />
+                            </Link>
+                          )}
+                          {(isCreator || isTaskCollaborator) && (
+                            <Link
+                              to={`/rate/${task.taskId}`}
+                              className="text-blue-500 transform transition-all duration-300 hover:scale-110 hover:text-white"
+                              title="Rate Collaborators"
+                            >
+                              <FaStar size={24} />
+                            </Link>
+                          )}
+                          {(isCreator || isTaskCollaborator) && (
+                            <Link
+                              to={`/status/${task.taskId}`}
+                              className="text-blue-500 transform transition-all duration-300 hover:scale-110 hover:text-white"
+                              title="Status"
+                            >
+                              <FaInfoCircle size={24} />
+                            </Link>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {/* If the current user is neither creator nor collaborator, show the Apply button */}
+                    {!isCreator && !isTaskCollaborator && (
+                      <div className="mt-4">
                         <button
                           onClick={() => handleApplyForTask(task.taskId)}
-                          className="bg-green-500 text-white px-4 py-2 rounded mt-2 transform transition-all duration-300 hover:scale-105"
+                          className="bg-green-500 text-white px-4 py-2 rounded transform transition-all duration-300 hover:scale-105"
                         >
                           Apply for Task
                         </button>
-                      )}
-                  </div>
-                  <div>
-                    {isCreator && (
-                      <Link
-                        to={`/collab/${task.taskId}`}
-                        className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                      >
-                        Go to Collaboration Workspace
-                      </Link>
-                    )}
-                    {((task.collaborators || []).some(
-                      (collab) =>
-                        collab && collab.toString() === currentUser?._id
-                    )) && (
-                      <Link
-                        to={`/collab/${task.taskId}`}
-                        className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                      >
-                        Go to Collaboration Workspace
-                      </Link>
+                      </div>
                     )}
                   </div>
-                  <div>
-                    {isCreator && (
-                      <Link
-                        to={`/applicants/${task.taskId}`}
-                        className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                      >
-                        View Applicants
-                      </Link>
-                    )}
-                  </div>
-                  {isCreator && (
-                    <Link
-                      to={`/rate/${task.taskId}`}
-                      className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                    >
-                      Rate Collaborators
-                    </Link>
-                  )}
-                  {((task.collaborators || []).some(
-                    (collab) =>
-                      collab && collab.toString() === currentUser?._id
-                  )) && (
-                    <Link
-                      to={`/rate/${task.taskId}`}
-                      className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                    >
-                      Rate Collaborators
-                    </Link>
-                  )}
-                  {isCreator && (
-                    <Link
-                      to={`/status/${task.taskId}`}
-                      className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                    >
-                      Status
-                    </Link>
-                  )}
-                  {((task.collaborators || []).some(
-                    (collab) =>
-                      collab && collab.toString() === currentUser?._id
-                  )) && (
-                    <Link
-                      to={`/status/${task.taskId}`}
-                      className="text-blue-500 underline ml-2 transform transition-all duration-300 hover:scale-105 hover:text-white"
-                    >
-                      Status
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
         )}
 
         {isCreator && (
           <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-4 text-white">
-              Add New Task
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 text-white">Add New Task</h3>
             <div className="space-y-2">
               <input
                 type="text"
@@ -373,7 +384,7 @@ const ProjectDetails = () => {
               />
               <button
                 onClick={handleAddTask}
-                className="bg-blue-500 text-white px-4 py-2 rounded mt-4 transform transition-all duration-300 hover:scale-105"
+                className="bg-blue-500 text-white px-4 py-2 rounded transform transition-all duration-300 hover:scale-105"
               >
                 Add Task
               </button>

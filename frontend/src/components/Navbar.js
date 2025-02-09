@@ -1,29 +1,88 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
+  const token = localStorage.getItem('authToken');
 
-    const handleLogout = () => {
-        // Remove token from localStorage
-        localStorage.removeItem('authToken');
-      
-        // Redirect to login page
-        window.location.href = '/login'; // Or use React Router's <Navigate />
-      };
+  const handleLogout = () => {
+    // Remove token from localStorage and redirect to login
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
+  };
 
   return (
     <nav className="bg-blue-900 text-white p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="text-2xl">FreelanceHub</div>
-        <ul className="flex space-x-6">
-          <li><a href="/" className="hover:text-gray-200">Home</a></li>
-          <li><a href="/login" className="hover:text-gray-200">Login</a></li>
-          <li><a href="/register" className="hover:text-gray-200">Register</a></li>
-          <li><a href="/dashboard" className="hover:text-gray-200">Dashboard</a></li>
-          <li><a href="/browse" className="hover:text-gray-200">Browse</a></li>
-          <li><a href="/myprojects" className="hover:text-gray-200">Projects</a></li>
-          <li><a href="/create-project" className="hover:text-gray-200">Create</a></li>
-        </ul>
-        <button onClick={handleLogout}>Logout</button>
+      <div className="container mx-auto flex items-center">
+        {token ? (
+          // Logged In: Three columns – logo at left, nav links centered, logout at right
+          <>
+            {/* Left Column: Logo */}
+            <div className="flex-1">
+              <div className="text-2xl font-bold">FreelanceHub</div>
+            </div>
+            {/* Center Column: Navigation Links */}
+            <div className="flex-1 flex justify-center">
+              <ul className="flex space-x-6">
+                <li>
+                  <Link to="/" className="hover:text-gray-200">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard" className="hover:text-gray-200">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/browse" className="hover:text-gray-200">
+                    Browse
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/myprojects" className="hover:text-gray-200">
+                    Projects
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/create-project" className="hover:text-gray-200">
+                    Create
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            {/* Right Column: Logout Button */}
+            <div className="flex-1 flex justify-end">
+              <button onClick={handleLogout} className="hover:text-gray-200">
+                Logout
+              </button>
+            </div>
+          </>
+        ) : (
+          // Logged Out: Empty left column, logo at center, and Login/Register at right
+          <>
+            {/* Left Column: Empty */}
+            <div className="flex-1"></div>
+            {/* Center Column: Logo */}
+            <div className="flex-1 flex justify-center">
+              <div className="text-2xl font-bold">FreelanceHub</div>
+            </div>
+            {/* Right Column: Login and Register */}
+            <div className="flex-1 flex justify-end">
+              <ul className="flex space-x-8">
+                <li>
+                  <Link to="/login" className="hover:text-gray-200">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/register" className="hover:text-gray-200">
+                    Register
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </>
+        )}
       </div>
     </nav>
   );

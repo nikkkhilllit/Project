@@ -753,5 +753,30 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/search', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.body; // Expecting a JSON body like { "query": "hello" }
+    if (!query) {
+      return res.status(400).json({ message: 'Query parameter is required in the body.' });
+    }
+
+    // Create a case-insensitive regular expression.
+    const regex = new RegExp(query, 'i');
+
+    // Search for projects where the project title, any task title, or any task skill matches the regex.
+    const projects = await Project.find({
+      $or: [
+        { title: regex },
+        { 'tasks.title': regex },
+        { 'tasks.skills': regex }
+      ]
+    });
+
+    res.status(200).json({ projects });
+  } catch (error) {
+    console.error('Error searching projects:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 module.exports = router;

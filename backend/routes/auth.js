@@ -538,4 +538,30 @@ router.get('/collaborator-on-time-rate/:id', authenticateToken, async (req, res)
   }
 });
 
+
+router.post('/search-users', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.body; // Expecting a JSON body like { "query": "john" }
+    if (!query) {
+      return res.status(400).json({ message: 'Query parameter is required in the body.' });
+    }
+
+    // Create a case-insensitive regular expression.
+    const regex = new RegExp(query, 'i');
+
+    // Search for users where either the username or email matches the regex.
+    const users = await User.find({
+      $or: [
+        { username: regex },
+        { email: regex }
+      ]
+    });
+
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;
