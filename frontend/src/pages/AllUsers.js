@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
 const AllUsers = () => {
@@ -111,22 +112,31 @@ const AllUsers = () => {
                       <span className="font-medium text-gray-400">On Time Rate:</span> {onTimeRate}% On Time
                     </p>
                     <div className="mt-2">
-                    {user.ratings && user.ratings.length > 0 ? (
-                      <>
-                        <span className="font-medium text-gray-400">Ratings: </span>
-                        {renderStars(averageRating)}
-                        <span className="text-gray-300 ml-2">({user.ratings.length})</span>
-                      </>
-                    ) : (
+                      {user.ratings && user.ratings.length > 0 ? (
                         <>
-                        <span className="font-medium text-gray-400">Ratings: </span>
-                          {renderStars(averageRating)} 
+                          <span className="font-medium text-gray-400">Ratings: </span>
+                          {renderStars(averageRating)}
+                          <span className="text-gray-300 ml-2">({user.ratings.length})</span>
                         </>
-                    )}
-                  </div>
+                      ) : (
+                        <>
+                          <span className="font-medium text-gray-400">Ratings: </span>
+                          {renderStars(averageRating)}
+                        </>
+                      )}
+                    </div>
                     <p className="text-gray-300">
                       <span className="font-medium text-gray-400">Active Streak:</span> {activeStreak} Days 🔥
                     </p>
+                  </div>
+                  {/* New: Dashboard Button */}
+                  <div className="mt-4">
+                    <Link
+                      to={`/usersdashboard/${user._id}`}
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-all duration-300"
+                    >
+                      View Profile
+                    </Link>
                   </div>
                 </div>
               );

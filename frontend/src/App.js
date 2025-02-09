@@ -15,6 +15,7 @@ import TaskDetails from './components/TaskDetails';
 import AllUsers from './pages/AllUsers';
 import PopularProjects from './components/PopularProjects';
 import BrowsePage from './pages/BrowsePage';
+import UsersDashboard from './components/UsersDashboard';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('authToken'); // Check for 'authToken'
@@ -116,6 +117,14 @@ function App() {
           element={
             <ProtectedRoute>
               <BrowsePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/usersdashboard/:id"  // Or use an appropriate path as needed
+          element={
+            <ProtectedRoute>
+              <UsersDashboard />
             </ProtectedRoute>
           }
         />

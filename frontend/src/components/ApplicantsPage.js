@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import Navbar from "./Navbar";
+import { FaUser } from "react-icons/fa"; // Import the user icon
 
 const ApplicantsPage = () => {
   const { taskId } = useParams();
@@ -35,7 +36,7 @@ const ApplicantsPage = () => {
         {},
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Include the auth token
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         }
       );
@@ -58,20 +59,31 @@ const ApplicantsPage = () => {
             {applicants.map((applicant) => (
               <div
                 key={applicant._id}
-                className="p-4 border rounded-xl bg-gray-700 transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                className="p-4 border rounded-xl bg-gray-700 transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex justify-between items-center"
               >
-                <p className="text-white">
-                  <span className="font-medium">User Name:</span> {applicant.username}
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-medium">Email Id:</span> {applicant.email}
-                </p>
-                <button
-                  onClick={() => acceptApplicant(applicant._id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded mt-2 transform transition-all duration-300 hover:scale-105 hover:bg-green-600"
-                >
-                  Accept
-                </button>
+                <div>
+                  <p className="text-white">
+                    <span className="font-medium">User Name:</span> {applicant.username}
+                  </p>
+                  <p className="text-gray-300">
+                    <span className="font-medium">Email Id:</span> {applicant.email}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end">
+                  {/* The user icon linking to the user's dashboard */}
+                  <Link
+                    to={`/usersdashboard/${applicant._id}`}
+                    className="text-blue-500 hover:text-blue-600 transition-colors duration-300"
+                  >
+                    <FaUser size={24} />
+                  </Link>
+                  <button
+                    onClick={() => acceptApplicant(applicant._id)}
+                    className="bg-green-500 text-white px-4 py-2 rounded mt-2 transform transition-all duration-300 hover:scale-105 hover:bg-green-600"
+                  >
+                    Accept
+                  </button>
+                </div>
               </div>
             ))}
           </div>

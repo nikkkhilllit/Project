@@ -391,4 +391,151 @@ router.get('/users', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /auth/user/:id - Fetch public details for an arbitrary user.
+router.get('/user/:id', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json({ user });
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /auth/user-stats/:id - Get statistics for an arbitrary user.
+router.get('/user-stats/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Populate the user's projects and tasks.
+    const user = await User.findById(userId)
+      .populate({
+        path: 'projects',
+        populate: { path: 'tasks' }
+      });
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    let completedTasks = 0;
+    let totalTasks = 0;
+    let onTimeTasks = 0;
+
+    // Iterate through projects/tasks to calculate metrics.
+    user.projects.forEach(project => {
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          totalTasks++;
+          if (task.status === 'completed') {
+            completedTasks++;
+            if (task.completedOn && task.deadline && new Date(task.completedOn) <= new Date(task.deadline)) {
+              onTimeTasks++;
+            }
+          }
+        });
+      }
+    });
+
+    const onTimeRate = completedTasks > 0 ? Math.round((onTimeTasks / completedTasks) * 100) : 0;
+
+    // Calculate average rating.
+    let averageRating = 0;
+    if (user.ratings && user.ratings.length > 0) {
+      const sum = user.ratings.reduce((acc, rating) => acc + rating.score, 0);
+      averageRating = sum / user.ratings.length;
+    }
+
+    // Calculate a basic skill distribution across tasks.
+    const skillCounts = {};
+    user.projects.forEach(project => {
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          if (task.skills && task.skills.length > 0) {
+            task.skills.forEach(skill => {
+              skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+            });
+          }
+        });
+      }
+    });
+
+    res.json({
+      completedTasks,
+      totalTasks,
+      onTimeRate,
+      skillDistribution: skillCounts,
+      averageRating,
+      streakDays: user.streakDays
+      // Optionally include recent activity or other stats.
+    });
+  } catch (error) {
+    console.error('Error in /user-stats:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /auth/completed-task-count/:id - Return the completed tasks count for the user.
+router.get('/completed-task-count/:id', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json({ completedTasksCount: user.completedTasks });
+  } catch (error) {
+    console.error('Error fetching completed task count:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /auth/collaborator-task-count/:id - Count tasks where the user is a collaborator.
+router.get('/collaborator-task-count/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.params.id);
+    const result = await Project.aggregate([
+      { $unwind: "$tasks" },
+      { $match: { "tasks.collaborators": userId } },
+      { $count: "taskCount" }
+    ]);
+    const count = result.length > 0 ? result[0].taskCount : 0;
+    res.status(200).json({ collaboratorTaskCount: count });
+  } catch (error) {
+    console.error("Error fetching collaborator task count:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /auth/collaborator-on-time-rate/:id - Calculate on-time rate for collaborator tasks.
+router.get('/collaborator-on-time-rate/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const projects = await Project.find({ "tasks.collaborators": userId }).lean();
+
+    let totalCollaboratorTasks = 0;
+    let totalOnTime = 0;
+
+    projects.forEach(project => {
+      if (project.tasks && project.tasks.length > 0) {
+        project.tasks.forEach(task => {
+          if (task.collaborators && task.collaborators.map(id => id.toString()).includes(userId)) {
+            totalCollaboratorTasks++;
+            if (
+              task.status === 'completed' &&
+              task.completedOn &&
+              task.deadline &&
+              new Date(task.completedOn) <= new Date(task.deadline)
+            ) {
+              totalOnTime++;
+            }
+          }
+        });
+      }
+    });
+
+    const onTimeRate = totalCollaboratorTasks > 0 ? Math.round((totalOnTime / totalCollaboratorTasks) * 100) : 0;
+    res.status(200).json({ onTimeRate });
+  } catch (error) {
+    console.error("Error calculating collaborator on time rate:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
