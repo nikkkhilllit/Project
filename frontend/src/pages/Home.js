@@ -66,7 +66,7 @@ const Home = () => {
       <Navbar />
       <main className="flex-1 flex flex-col items-center justify-center py-16">
         <div className="relative text-center px-6 max-w-2xl space-y-6">
-          <h1 className="text-5xl font-bold text-white">Welcome to FreelanceHub!</h1>
+          <h1 className="text-5xl font-bold text-white">Welcome to DevSpace!</h1>
           <p className="text-xl text-gray-300">A Platform for Collaborative Work</p>
           {/* If user is logged in, show search form; otherwise, show a "Let's Start" button */}
           {token ? (

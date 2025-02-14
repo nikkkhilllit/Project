@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from './Navbar';
+import { Link } from 'react-router-dom';
 
 const MyProjects = () => {
   const [projects, setProjects] = useState([]);
@@ -42,7 +43,7 @@ const MyProjects = () => {
     <h1 className="text-4xl font-bold text-center mb-8 text-white">My Projects</h1>
     
     {projects.length === 0 ? (
-      <p className="text-xl text-center text-gray-400">No projects found.</p>
+      <p className="text-xl text-center text-gray-400">No projects found<Link to='/create-project' className='text-xl text-center pl-2 text-blue-600'>Create it.</Link></p>
     ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {projects.map((project) => (

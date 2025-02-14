@@ -5,10 +5,10 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const [username, setUsername] = useState('');
-  const [email, setEmail]     = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError]     = useState('');
-  const navigate            = useNavigate();
+  const [error, setError]       = useState('');
+  const navigate              = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -24,7 +24,16 @@ const Register = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center px-4">
+      {/* Logo Above the Registration Box */}
+      <div className="mb-8">
+        <Link to="/">
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
+            DevSpace
+          </h1>
+        </Link>
+      </div>
+      
       <div className="w-full max-w-md bg-gray-800 shadow-lg rounded-lg p-8">
         <h2 className="text-3xl font-bold text-center text-white mb-6">Register</h2>
 

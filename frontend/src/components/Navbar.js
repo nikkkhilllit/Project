@@ -18,7 +18,11 @@ const Navbar = () => {
           <>
             {/* Left Column: Logo */}
             <div className="flex-1">
-              <div className="text-2xl font-bold">FreelanceHub</div>
+              <Link to="/">
+                        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
+                          DevSpace
+                        </h1>
+                      </Link>
             </div>
             {/* Center Column: Navigation Links */}
             <div className="flex-1 flex justify-center">
@@ -64,7 +68,11 @@ const Navbar = () => {
             <div className="flex-1"></div>
             {/* Center Column: Logo */}
             <div className="flex-1 flex justify-center">
-              <div className="text-2xl font-bold">FreelanceHub</div>
+              <Link to="/">
+                        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
+                          DevSpace
+                        </h1>
+                      </Link>
             </div>
             {/* Right Column: Login and Register */}
             <div className="flex-1 flex justify-end">

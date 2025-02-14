@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
   // Handle form submission
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent the page from refreshing on form submit
+    e.preventDefault();
     try {
       const response = await axios.post('http://localhost:5000/auth/login', { email, password });
-      console.log(response.data); // You can store the JWT in localStorage or state
-      localStorage.setItem('authToken', response.data.token); // Storing JWT under 'authToken'
-      alert('Login successful!');
-      
-      // Redirect to protected route after successful login (e.g., Dashboard)
-      navigate('/dashboard');  // Replace '/dashboard' with your actual protected route if needed
+      console.log(response.data);
+      localStorage.setItem('authToken', response.data.token);
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login failed:', error.response?.data?.message || error.message);
       setError(error.response?.data?.message || 'Something went wrong');
@@ -26,8 +23,17 @@ const Login = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-900">
-      <div className="w-full max-w-md bg-gray-800 shadow-lg rounded-lg p-8">
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center px-4">
+      {/* Cool Logo Above the Login Box */}
+      <div className="mb-8">
+        <Link to="/">
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
+            DevSpace
+          </h1>
+        </Link>
+      </div>
+
+      <div className="w-full max-w-md bg-gray-800 shadow-2xl rounded-lg p-8">
         <h2 className="text-3xl font-bold text-center text-white mb-6">Login</h2>
         
         {error && <div className="text-red-400 text-center mb-4">{error}</div>}
