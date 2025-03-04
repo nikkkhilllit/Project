@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import Navbar from "./Navbar";
 import { FaUser } from "react-icons/fa"; // Import the user icon
+import { ThreeDots } from 'react-loader-spinner';
+
 
 const ApplicantsPage = () => {
   const { taskId } = useParams();

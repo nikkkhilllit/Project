@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { ThreeDots } from 'react-loader-spinner';
+
 
 const Rating = ({ taskId, collaboratorId, collaboratorUsername }) => {
   const [rating, setRating] = useState(0);

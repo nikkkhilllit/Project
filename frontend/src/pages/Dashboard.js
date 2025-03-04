@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import { Radar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { ThreeDots } from 'react-loader-spinner';
 
 Chart.register(...registerables);
 
@@ -116,7 +117,13 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center bg-gray-900 h-screen">
+        <ThreeDots color="#6366f1" height={80} width={80} />
+      </div>
+    );
+  }
   if (!token) return <Navigate to="/login" />;
   if (error) return <p>{error}</p>;
 

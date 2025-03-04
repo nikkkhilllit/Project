@@ -54,7 +54,7 @@ const ProjectCreate = () => {
   };
 
   return (
-    <div className="w-screen min-h-screen bg-gray-800">
+    <div className="w-screen min-h-screen bg-gray-900">
       <Navbar />
       <div className="w-full p-6">
         <div className="max-w-4xl mx-auto bg-gray-800 rounded-lg shadow-lg p-6">

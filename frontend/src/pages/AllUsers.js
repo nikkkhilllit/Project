@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { ThreeDots } from 'react-loader-spinner';
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
@@ -55,9 +56,12 @@ const AllUsers = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading...
-      </div>
+      
+              <div className="flex justify-center items-center bg-gray-900 h-screen">
+                <ThreeDots color="#6366f1" height={80} width={80} />
+              </div>
+            
+      
     );
   }
 

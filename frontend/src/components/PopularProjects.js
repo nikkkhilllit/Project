@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from './Navbar';
+import { ThreeDots } from 'react-loader-spinner';
+
 
 const PopularProjects = () => {
   const [projects, setProjects] = useState([]);
@@ -32,7 +34,11 @@ const PopularProjects = () => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center bg-gray-900 items-center h-screen">
+        <ThreeDots color="#6366f1" height={80} width={80} />
+      </div>
+    );
   }
 
   if (error) {
